@@ -1,0 +1,379 @@
+<?php
+
+namespace App\Http\Controllers\Client;
+
+use App\Http\Controllers\Controller;
+use App\Jobs\ProcessCampaign;
+use App\Models\Campaign;
+use App\Models\CampaignRecipient;
+use Carbon\CarbonImmutable;
+use DateTimeZone;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class CampaignController extends Controller
+{
+    /**
+     * Display a listing of campaigns.
+     */
+    public function index(Request $request): Response
+    {
+        $tenant = $request->user()->tenant;
+
+        $campaigns = $tenant->campaigns()
+            ->with(['messageTemplate', 'whatsappAccount'])
+            ->latest()
+            ->paginate(15)
+            ->through(fn (Campaign $campaign): array => [
+                'id' => $campaign->id,
+                'name' => $campaign->name,
+                'status' => $campaign->status,
+                'message_type' => $campaign->message_type,
+                'message_label' => $campaign->message_type === 'direct'
+                    ? __('Direct message')
+                    : $campaign->messageTemplate?->name,
+                'phone_number' => $campaign->whatsappAccount->phone_number,
+                'total_recipients' => $campaign->total_recipients,
+                'sent_count' => $campaign->sent_count,
+                'delivered_count' => $campaign->delivered_count,
+                'failed_count' => $campaign->failed_count,
+                'read_count' => $campaign->read_count,
+                'progress' => $campaign->progressPercentage(),
+                'scheduled_at' => $this->formatScheduledAt($campaign),
+                'scheduled_timezone' => $campaign->scheduled_timezone,
+                'created_at' => $campaign->created_at->format('Y-m-d H:i'),
+            ]);
+
+        return Inertia::render('client/campaigns/index', [
+            'campaigns' => $campaigns,
+        ]);
+    }
+
+    /**
+     * Show the form to create a new campaign.
+     */
+    public function create(Request $request): Response
+    {
+        $tenant = $request->user()->tenant;
+
+        $accounts = $tenant->whatsappAccounts()
+            ->where('status', 'active')
+            ->get()
+            ->map(fn ($account): array => [
+                'id' => $account->id,
+                'phone_number' => $account->phone_number,
+                'display_name' => $account->display_name,
+            ]);
+
+        $templates = $tenant->messageTemplates()
+            ->where('status', 'approved')
+            ->get()
+            ->map(fn ($template): array => [
+                'id' => $template->id,
+                'name' => $template->name,
+                'language' => $template->language,
+                'category' => $template->category,
+                'whatsapp_account_id' => $template->whatsapp_account_id,
+                'components' => $template->components,
+            ]);
+
+        $groups = $tenant->contactGroups()
+            ->withCount('contacts')
+            ->get()
+            ->map(fn ($group): array => [
+                'id' => $group->id,
+                'name' => $group->name,
+                'contacts_count' => $group->contacts_count,
+            ]);
+
+        return Inertia::render('client/campaigns/create', [
+            'accounts' => $accounts,
+            'templates' => $templates,
+            'groups' => $groups,
+            'timezones' => DateTimeZone::listIdentifiers(),
+            'defaultTimezone' => config('app.timezone', 'UTC'),
+        ]);
+    }
+
+    /**
+     * Store a new campaign.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'whatsapp_account_id' => ['required', 'exists:whatsapp_accounts,id'],
+            'message_type' => ['required', Rule::in(['template', 'direct'])],
+            'message_template_id' => [
+                Rule::requiredIf(fn (): bool => $request->input('message_type', 'template') === 'template'),
+                'nullable',
+                'exists:message_templates,id',
+            ],
+            'direct_message_body' => [
+                Rule::requiredIf(fn (): bool => $request->input('message_type') === 'direct'),
+                'nullable',
+                'string',
+                'max:4096',
+            ],
+            'scheduled_at' => ['nullable', 'date'],
+            'scheduled_timezone' => ['required_with:scheduled_at', 'nullable', 'timezone'],
+            'contact_group_id' => ['nullable', 'exists:contact_groups,id'],
+            'recipients' => ['required_without:contact_group_id', 'array'],
+            'recipients.*.phone_number' => ['required_with:recipients', 'string'],
+            'recipients.*.variables' => ['nullable', 'array'],
+        ]);
+
+        $tenant = $request->user()->tenant;
+        $messageType = $validated['message_type'];
+        $scheduledAt = $this->scheduledAtFromRequest($validated);
+
+        if ($scheduledAt && $scheduledAt->lte(now())) {
+            return back()->withErrors([
+                'scheduled_at' => __('The scheduled dispatch time must be in the future.'),
+            ])->withInput();
+        }
+
+        // Verify account and template belong to tenant
+        $account = $tenant->whatsappAccounts()->findOrFail($validated['whatsapp_account_id']);
+        $template = null;
+
+        if ($messageType === 'template') {
+            $template = $tenant->messageTemplates()
+                ->where('whatsapp_account_id', $account->id)
+                ->where('status', 'approved')
+                ->findOrFail($validated['message_template_id']);
+        }
+
+        $recipientsList = [];
+        if (! empty($validated['contact_group_id'])) {
+            $group = $tenant->contactGroups()->findOrFail($validated['contact_group_id']);
+            $contacts = $group->contacts()->get();
+            foreach ($contacts as $contact) {
+                // Pass the contact name and variables
+                $recipientsList[] = [
+                    'phone_number' => $contact->phone,
+                    'variables' => [
+                        $contact->name,
+                        $contact->var1 ?? '',
+                        $contact->var2 ?? '',
+                        $contact->var3 ?? '',
+                        $contact->var4 ?? '',
+                        $contact->var5 ?? '',
+                    ],
+                ];
+            }
+        } else {
+            $recipientsList = $validated['recipients'] ?? [];
+        }
+
+        if (empty($recipientsList)) {
+            return back()->withErrors(['recipients' => __('No recipients found in the selected group.')]);
+        }
+
+        $campaign = $tenant->campaigns()->create([
+            'whatsapp_account_id' => $account->id,
+            'message_template_id' => $template?->id,
+            'message_type' => $messageType,
+            'direct_message_body' => $messageType === 'direct' ? $validated['direct_message_body'] : null,
+            'name' => $validated['name'],
+            'status' => $scheduledAt ? 'scheduled' : 'draft',
+            'total_recipients' => count($recipientsList),
+            'scheduled_at' => $scheduledAt,
+            'scheduled_timezone' => $scheduledAt ? $validated['scheduled_timezone'] : null,
+        ]);
+
+        // Create recipients
+        foreach ($recipientsList as $recipientData) {
+            $campaign->recipients()->create([
+                'phone_number' => $recipientData['phone_number'],
+                'template_variables' => $recipientData['variables'] ?? null,
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Campaign created successfully.')]);
+
+        return to_route('client.campaigns.show', $campaign);
+    }
+
+    /**
+     * Display a campaign's details.
+     */
+    public function show(Request $request, Campaign $campaign): Response
+    {
+        $tenant = $request->user()->tenant;
+
+        if ($campaign->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        $campaign->load(['messageTemplate', 'whatsappAccount']);
+
+        $recipients = $campaign->recipients()
+            ->latest()
+            ->paginate(50)
+            ->through(fn (CampaignRecipient $recipient): array => [
+                'id' => $recipient->id,
+                'phone_number' => $recipient->phone_number,
+                'status' => $recipient->status,
+                'error_message' => $recipient->error_message,
+                'sent_at' => $recipient->sent_at?->format('H:i:s'),
+                'delivered_at' => $recipient->delivered_at?->format('H:i:s'),
+                'read_at' => $recipient->read_at?->format('H:i:s'),
+            ]);
+
+        return Inertia::render('client/campaigns/show', [
+            'campaign' => [
+                'id' => $campaign->id,
+                'name' => $campaign->name,
+                'status' => $campaign->status,
+                'message_type' => $campaign->message_type,
+                'message_label' => $campaign->message_type === 'direct'
+                    ? __('Direct message')
+                    : $campaign->messageTemplate?->name,
+                'direct_message_body' => $campaign->direct_message_body,
+                'phone_number' => $campaign->whatsappAccount->phone_number,
+                'total_recipients' => $campaign->total_recipients,
+                'sent_count' => $campaign->sent_count,
+                'delivered_count' => $campaign->delivered_count,
+                'failed_count' => $campaign->failed_count,
+                'read_count' => $campaign->read_count,
+                'total_cost' => number_format((float) $campaign->total_cost, 4),
+                'progress' => $campaign->progressPercentage(),
+                'scheduled_at' => $this->formatScheduledAt($campaign),
+                'scheduled_timezone' => $campaign->scheduled_timezone,
+                'started_at' => $campaign->started_at?->format('Y-m-d H:i'),
+                'completed_at' => $campaign->completed_at?->format('Y-m-d H:i'),
+                'created_at' => $campaign->created_at->format('Y-m-d H:i'),
+            ],
+            'recipients' => $recipients,
+        ]);
+    }
+
+    /**
+     * Start a campaign.
+     */
+    public function start(Request $request, Campaign $campaign): RedirectResponse
+    {
+        $tenant = $request->user()->tenant;
+
+        if ($campaign->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        if (! in_array($campaign->status, ['draft', 'scheduled', 'paused'])) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Campaign cannot be started in its current state.')]);
+
+            return to_route('client.campaigns.show', $campaign);
+        }
+
+        ProcessCampaign::dispatch($campaign);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Campaign started! Messages are being sent.')]);
+
+        return to_route('client.campaigns.show', $campaign);
+    }
+
+    /**
+     * Pause a campaign.
+     */
+    public function pause(Request $request, Campaign $campaign): RedirectResponse
+    {
+        $tenant = $request->user()->tenant;
+
+        if ($campaign->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        if ($campaign->status !== 'processing') {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Only processing campaigns can be paused.')]);
+
+            return to_route('client.campaigns.show', $campaign);
+        }
+
+        $campaign->update(['status' => 'paused']);
+
+        Inertia::flash('toast', ['type' => 'info', 'message' => __('Campaign paused.')]);
+
+        return to_route('client.campaigns.show', $campaign);
+    }
+
+    /**
+     * Upload recipients from an Excel/CSV file.
+     */
+    public function uploadRecipients(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:5120'],
+        ]);
+
+        $file = $request->file('file');
+        $recipients = [];
+
+        // Parse CSV
+        if (($handle = fopen($file->getPathname(), 'r')) !== false) {
+            $header = fgetcsv($handle);
+
+            while (($row = fgetcsv($handle)) !== false) {
+                if (isset($row[0]) && ! empty(trim($row[0]))) {
+                    $phoneNumber = trim($row[0]);
+
+                    // Ensure phone number starts with +
+                    if (! str_starts_with($phoneNumber, '+')) {
+                        $phoneNumber = '+'.$phoneNumber;
+                    }
+
+                    $variables = array_slice($row, 1);
+                    $variables = array_filter($variables, fn ($v): bool => $v !== null && $v !== '');
+
+                    $recipients[] = [
+                        'phone_number' => $phoneNumber,
+                        'variables' => ! empty($variables) ? array_values($variables) : null,
+                    ];
+                }
+            }
+
+            fclose($handle);
+        }
+
+        return response()->json([
+            'recipients' => $recipients,
+            'count' => count($recipients),
+        ]);
+    }
+
+    /**
+     * Convert the user-selected local scheduled time into UTC storage time.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    protected function scheduledAtFromRequest(array $validated): ?CarbonImmutable
+    {
+        if (empty($validated['scheduled_at'])) {
+            return null;
+        }
+
+        return CarbonImmutable::parse(
+            $validated['scheduled_at'],
+            $validated['scheduled_timezone'] ?? config('app.timezone', 'UTC'),
+        )->utc();
+    }
+
+    /**
+     * Format scheduled time in the timezone selected when the campaign was created.
+     */
+    protected function formatScheduledAt(Campaign $campaign): ?string
+    {
+        if (! $campaign->scheduled_at) {
+            return null;
+        }
+
+        return $campaign->scheduled_at
+            ->copy()
+            ->timezone($campaign->scheduled_timezone ?? config('app.timezone', 'UTC'))
+            ->format('Y-m-d H:i');
+    }
+}
