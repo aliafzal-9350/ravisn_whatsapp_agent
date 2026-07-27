@@ -72,7 +72,7 @@ export function ClientSidebar() {
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link href="/dashboard" prefetch>
-                                <AppLogo />
+                                <AppLogo className="h-9 w-auto" />
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

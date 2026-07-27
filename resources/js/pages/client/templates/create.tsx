@@ -1,5 +1,14 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, FileText, Plus, Trash2 } from 'lucide-react';
+import {
+    ArrowLeft,
+    FileText,
+    Film,
+    Image,
+    Plus,
+    Trash2,
+    UploadCloud,
+    X,
+} from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 import { TemplatePreview } from '@/components/template-preview';
@@ -110,12 +119,31 @@ interface ButtonItem {
     url?: string;
 }
 
+type HeaderType = 'NONE' | 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+
+const MEDIA_ACCEPT: Record<string, string> = {
+    IMAGE: 'image/jpeg,image/png,image/gif,image/webp',
+    VIDEO: 'video/mp4,video/3gpp',
+    DOCUMENT: 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+
+const MEDIA_HINT: Record<string, string> = {
+    IMAGE: 'JPG, PNG, GIF, WEBP — max 5 MB',
+    VIDEO: 'MP4, 3GPP — max 16 MB',
+    DOCUMENT: 'PDF, DOC, DOCX — max 100 MB',
+};
+
 export default function TemplateCreate({ accounts }: TemplateCreateProps) {
-    const [headerType, setHeaderType] = React.useState<'TEXT' | 'NONE'>('NONE');
+    const [headerType, setHeaderType] = React.useState<HeaderType>('NONE');
     const [headerText, setHeaderText] = React.useState('');
+    const [headerMediaFile, setHeaderMediaFile] = React.useState<File | null>(null);
+    const [headerMediaPreviewUrl, setHeaderMediaPreviewUrl] = React.useState<string | null>(null);
+    const [isDragging, setIsDragging] = React.useState(false);
     const [bodyText, setBodyText] = React.useState('');
     const [footerText, setFooterText] = React.useState('');
     const [buttons, setButtons] = React.useState<ButtonItem[]>([]);
+
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const { data, setData, post, processing, errors } = useForm({
         whatsapp_account_id: accounts.length > 0 ? String(accounts[0].id) : '',
@@ -123,7 +151,78 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
         language: 'en',
         category: 'MARKETING',
         components: [] as any[],
+        header_type: 'NONE' as HeaderType,
+        header_media: null as File | null,
     });
+
+    // Revoke object URL on unmount / file change to avoid memory leaks
+    React.useEffect(() => {
+        return () => {
+            if (headerMediaPreviewUrl) {
+                URL.revokeObjectURL(headerMediaPreviewUrl);
+            }
+        };
+    }, [headerMediaPreviewUrl]);
+
+    const handleFileSelect = (file: File) => {
+        if (headerMediaPreviewUrl) {
+            URL.revokeObjectURL(headerMediaPreviewUrl);
+        }
+
+        setHeaderMediaFile(file);
+        setData('header_media', file);
+
+        if (headerType === 'IMAGE') {
+            setHeaderMediaPreviewUrl(URL.createObjectURL(file));
+        } else if (headerType === 'VIDEO') {
+            setHeaderMediaPreviewUrl(URL.createObjectURL(file));
+        } else {
+            setHeaderMediaPreviewUrl(null);
+        }
+    };
+
+    const handleDropzoneDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+
+        if (file) {
+            handleFileSelect(file);
+        }
+    };
+
+    const handleDropzoneDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDropzoneDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleClearMedia = () => {
+        if (headerMediaPreviewUrl) {
+            URL.revokeObjectURL(headerMediaPreviewUrl);
+        }
+
+        setHeaderMediaFile(null);
+        setHeaderMediaPreviewUrl(null);
+        setData('header_media', null);
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleHeaderTypeChange = (val: HeaderType) => {
+        setHeaderType(val);
+        setData('header_type', val);
+        handleClearMedia();
+
+        if (val !== 'TEXT') {
+            setHeaderText('');
+        }
+    };
 
     const handleAddButton = () => {
         if (buttons.length >= 10) {
@@ -164,6 +263,7 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
             data.components === submittingWithComponents
         ) {
             post('/dashboard/templates', {
+                forceFormData: true,
                 onSuccess: () => {
                     toast.success('Template submitted successfully to Meta!');
                     setSubmittingWithComponents(null);
@@ -179,6 +279,10 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
                         toast.error(
                             'Failed to validate template component structures.',
                         );
+                    }
+
+                    if (err.header_media) {
+                        toast.error(err.header_media);
                     }
                 },
             });
@@ -199,6 +303,15 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
             return;
         }
 
+        // Validate media is provided for media header types
+        const isMediaHeader = ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerType);
+
+        if (isMediaHeader && !headerMediaFile) {
+            toast.error(`Please upload a ${headerType.toLowerCase()} file for the header.`);
+
+            return;
+        }
+
         // Build Meta Components Array
         const componentsArray: any[] = [];
 
@@ -207,6 +320,11 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
                 type: 'HEADER',
                 format: 'TEXT',
                 text: headerText.trim(),
+            });
+        } else if (isMediaHeader) {
+            componentsArray.push({
+                type: 'HEADER',
+                format: headerType,
             });
         }
 
@@ -262,6 +380,8 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
         // Put components in form data and trigger async submit
         setSubmittingWithComponents(componentsArray);
     };
+
+    const isMediaHeader = ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerType);
 
     return (
         <>
@@ -444,15 +564,11 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
                                         </h3>
                                         <Select
                                             value={headerType}
-                                            onValueChange={(val: any) => {
-                                                setHeaderType(val);
-
-                                                if (val === 'NONE') {
-                                                    setHeaderText('');
-                                                }
-                                            }}
+                                            onValueChange={(val: any) =>
+                                                handleHeaderTypeChange(val)
+                                            }
                                         >
-                                            <SelectTrigger className="h-8 w-[120px] text-xs">
+                                            <SelectTrigger className="h-8 w-[140px] text-xs">
                                                 <SelectValue placeholder="Header type" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -461,6 +577,15 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
                                                 </SelectItem>
                                                 <SelectItem value="TEXT">
                                                     Text
+                                                </SelectItem>
+                                                <SelectItem value="IMAGE">
+                                                    Image
+                                                </SelectItem>
+                                                <SelectItem value="VIDEO">
+                                                    Video
+                                                </SelectItem>
+                                                <SelectItem value="DOCUMENT">
+                                                    Document
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -485,8 +610,139 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
                                             <span className="text-right text-[10px] text-muted-foreground">
                                                 {headerText.length}/60
                                                 characters. Supports one
-                                                variable (e.g. `{'{{1}}'}`).
+                                                variable (e.g. `{'{{1}}'}`)
+                                                .
                                             </span>
+                                        </div>
+                                    )}
+
+                                    {/* Media dropzone */}
+                                    {isMediaHeader && (
+                                        <div className="flex flex-col gap-2">
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                id="header_media_input"
+                                                accept={MEDIA_ACCEPT[headerType]}
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    const file =
+                                                        e.target.files?.[0];
+
+                                                    if (file) {
+                                                        handleFileSelect(file);
+                                                    }
+                                                }}
+                                            />
+
+                                            {!headerMediaFile ? (
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-label={`Upload ${headerType.toLowerCase()} file`}
+                                                    className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 transition-colors ${
+                                                        isDragging
+                                                            ? 'border-emerald-500 bg-emerald-500/10'
+                                                            : 'border-zinc-600 bg-zinc-900/50 hover:border-emerald-600 hover:bg-emerald-950/20 dark:border-zinc-700 dark:bg-zinc-900/40'
+                                                    }`}
+                                                    onDrop={handleDropzoneDrop}
+                                                    onDragOver={
+                                                        handleDropzoneDragOver
+                                                    }
+                                                    onDragLeave={
+                                                        handleDropzoneDragLeave
+                                                    }
+                                                    onClick={() =>
+                                                        fileInputRef.current?.click()
+                                                    }
+                                                    onKeyDown={(e) => {
+                                                        if (
+                                                            e.key === 'Enter' ||
+                                                            e.key === ' '
+                                                        ) {
+                                                            fileInputRef.current?.click();
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 dark:bg-zinc-800">
+                                                        {headerType ===
+                                                        'IMAGE' ? (
+                                                            <Image className="h-5 w-5 text-emerald-400" />
+                                                        ) : headerType ===
+                                                          'VIDEO' ? (
+                                                            <Film className="h-5 w-5 text-emerald-400" />
+                                                        ) : (
+                                                            <FileText className="h-5 w-5 text-emerald-400" />
+                                                        )}
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-sm font-medium text-foreground">
+                                                            <span className="text-emerald-500">
+                                                                Click to upload
+                                                            </span>{' '}
+                                                            or drag & drop
+                                                        </p>
+                                                        <p className="mt-1 text-[11px] text-muted-foreground">
+                                                            {
+                                                                MEDIA_HINT[
+                                                                    headerType
+                                                                ]
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="relative flex items-center gap-3 rounded-lg border border-emerald-600/40 bg-emerald-950/20 p-3">
+                                                    {/* Preview thumbnail */}
+                                                    {headerType === 'IMAGE' &&
+                                                        headerMediaPreviewUrl && (
+                                                            <img
+                                                                src={
+                                                                    headerMediaPreviewUrl
+                                                                }
+                                                                alt="Preview"
+                                                                className="h-14 w-14 rounded object-cover"
+                                                            />
+                                                        )}
+                                                    {headerType === 'VIDEO' && (
+                                                        <div className="flex h-14 w-14 items-center justify-center rounded bg-zinc-800">
+                                                            <Film className="h-6 w-6 text-emerald-400" />
+                                                        </div>
+                                                    )}
+                                                    {headerType ===
+                                                        'DOCUMENT' && (
+                                                        <div className="flex h-14 w-14 items-center justify-center rounded bg-zinc-800">
+                                                            <FileText className="h-6 w-6 text-emerald-400" />
+                                                        </div>
+                                                    )}
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-sm font-medium text-foreground">
+                                                            {
+                                                                headerMediaFile.name
+                                                            }
+                                                        </p>
+                                                        <p className="text-[11px] text-muted-foreground">
+                                                            {(
+                                                                headerMediaFile.size /
+                                                                1024 /
+                                                                1024
+                                                            ).toFixed(2)}{' '}
+                                                            MB
+                                                        </p>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-rose-500"
+                                                        onClick={
+                                                            handleClearMedia
+                                                        }
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -738,6 +994,10 @@ export default function TemplateCreate({ accounts }: TemplateCreateProps) {
                                     language={data.language}
                                     headerType={headerType}
                                     headerText={headerText}
+                                    headerMediaUrl={headerMediaPreviewUrl}
+                                    headerMediaType={
+                                        isMediaHeader ? headerType : undefined
+                                    }
                                     bodyText={bodyText}
                                     footerText={footerText}
                                     buttons={buttons}

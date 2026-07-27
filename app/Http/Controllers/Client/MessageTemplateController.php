@@ -73,7 +73,22 @@ class MessageTemplateController extends Controller
             'language' => ['required', 'string', 'max:10'],
             'category' => ['required', 'string', 'in:MARKETING,UTILITY,AUTHENTICATION'],
             'components' => ['required', 'array'],
+            'header_type' => ['nullable', 'string', 'in:NONE,TEXT,IMAGE,VIDEO,DOCUMENT'],
+            'header_media' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,gif,webp,mp4,3gpp,pdf,doc,docx',
+                'max:102400',
+            ],
         ]);
+
+        $headerType = strtoupper($validated['header_type'] ?? 'NONE');
+        $mediaHeaderTypes = ['IMAGE', 'VIDEO', 'DOCUMENT'];
+        $mediaPath = null;
+
+        if (in_array($headerType, $mediaHeaderTypes) && $request->hasFile('header_media')) {
+            $mediaPath = $request->file('header_media')->store('template_media', 'public');
+        }
 
         $tenant = $request->user()->tenant;
 

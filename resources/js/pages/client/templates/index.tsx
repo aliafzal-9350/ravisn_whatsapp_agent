@@ -52,7 +52,7 @@ export default function TemplatesIndex({ templates }: TemplatesIndexProps) {
     const handleDelete = (templateId: number, name: string) => {
         if (
             confirm(
-                `Are you sure you want to delete template "${name}" from Meta and ZeroMsg?`,
+                `Are you sure you want to delete template "${name}" from Meta and RAVISN?`,
             )
         ) {
             router.delete(`/dashboard/templates/${templateId}`, {

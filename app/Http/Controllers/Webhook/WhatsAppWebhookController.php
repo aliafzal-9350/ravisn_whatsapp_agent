@@ -7,6 +7,7 @@ use App\Services\WhatsApp\WebhookHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 
 class WhatsAppWebhookController extends Controller
 {
@@ -31,10 +32,11 @@ class WhatsAppWebhookController extends Controller
     {
 
         if (! $handler->isValidSignature($request, $tenant_token)) {
-            \Illuminate\Support\Facades\Log::warning('WhatsApp Webhook signature verification failed', [
+            Log::warning('WhatsApp Webhook signature verification failed', [
                 'tenant_token' => $tenant_token,
                 'signature_header' => $request->header('X-Hub-Signature-256'),
             ]);
+
             return response()->json(['error' => 'Invalid signature'], 403);
         }
 

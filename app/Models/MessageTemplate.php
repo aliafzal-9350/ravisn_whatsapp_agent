@@ -66,7 +66,7 @@ class MessageTemplate extends Model
      * Map a flat array of values to the template body parameters format.
      * Supports both named and positional parameters.
      *
-     * @param array<int, string> $values
+     * @param  array<int, string>  $values
      * @return array<int, array<string, string>>
      */
     public function getBodyParameters(array $values): array
@@ -206,7 +206,7 @@ class MessageTemplate extends Model
     /**
      * Reconstruct the actual formatted message body with variables injected.
      *
-     * @param array<int, string> $values
+     * @param  array<int, string>  $values
      */
     public function formatBodyText(array $values): string
     {

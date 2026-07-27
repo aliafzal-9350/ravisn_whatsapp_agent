@@ -629,7 +629,7 @@ export default function ContactsIndex({
                                 </h2>
                                 <p className="mt-0.5 text-xs text-muted-foreground">
                                     {activeGroupDetails?.description ||
-                                        'View and manage all contact entries saved in ZeroMsg.'}
+                                        'View and manage all contact entries saved in RAVISN.'}
                                 </p>
                             </div>
 

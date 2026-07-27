@@ -288,7 +288,7 @@ class WhatsappAccountController extends Controller
                         'response' => $exchangeResponse->json(),
                         'status' => $exchangeResponse->status(),
                     ]);
-                    throw new \Exception('Failed to exchange authorization code: ' . ($exchangeResponse->json('error.message') ?? 'Unknown error'));
+                    throw new \Exception('Failed to exchange authorization code: '.($exchangeResponse->json('error.message') ?? 'Unknown error'));
                 }
 
                 $accessToken = $exchangeResponse->json('access_token');

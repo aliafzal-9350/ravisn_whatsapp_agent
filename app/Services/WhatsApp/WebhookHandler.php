@@ -9,6 +9,8 @@ use App\Models\SystemNotification;
 use App\Models\Tenant;
 use App\Models\WhatsappAccount;
 use App\Models\WhatsappChat;
+use App\Models\WhatsappMessage;
+use App\Services\AI\RavisnAiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -206,6 +208,10 @@ class WebhookHandler
             // Process Automation Flows
             $this->processAutomationFlows($tenant, $customerPhone, $body, $account);
 
+            // Process RAVISN Master AI Automation Engine Directives
+            $aiService = app(RavisnAiService::class);
+            $aiService->processIncomingMessage($chat, $body);
+
             // Dispatch outgoing webhooks for the tenant if configured
             $activeWebhooks = $tenant->outgoingWebhooks()->where('is_active', true)->get();
             if ($activeWebhooks->isNotEmpty()) {
@@ -213,9 +219,11 @@ class WebhookHandler
                     'event' => 'message.received',
                     'timestamp' => now()->toIso8601String(),
                     'tenant_id' => $tenant->id,
+                    'CURRENT_ACTIVE_STRATEGY' => $tenant->ai_strategy ?? 'lead_qualifier',
                     'data' => [
                         'message_id' => $msgId,
                         'phone_number_id' => $phoneNumberId,
+                        'CURRENT_ACTIVE_STRATEGY' => $tenant->ai_strategy ?? 'lead_qualifier',
                         'sender' => [
                             'name' => $customerName ?? $customerPhone,
                             'phone' => $customerPhone,
@@ -261,7 +269,7 @@ class WebhookHandler
             }
 
             // Update inbox/chat message status (covers inbox, API, and automation messages)
-            $chatMessage = \App\Models\WhatsappMessage::where('meta_message_id', $messageId)->first();
+            $chatMessage = WhatsappMessage::where('meta_message_id', $messageId)->first();
 
             if ($chatMessage) {
                 $newStatus = match ($statusValue) {
@@ -540,7 +548,7 @@ class WebhookHandler
             }
         } elseif ($actionType === 'send_email') {
             $emailTo = $replaceVariables($action['email_to'] ?? '');
-            $subject = $replaceVariables($action['subject'] ?? 'ZeroMsg Automation Alert');
+            $subject = $replaceVariables($action['subject'] ?? 'RAVISN Automation Alert');
             $emailText = $replaceVariables($action['text'] ?? '');
             if (! empty($emailTo)) {
                 try {

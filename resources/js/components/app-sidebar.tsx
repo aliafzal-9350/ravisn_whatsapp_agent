@@ -25,13 +25,13 @@ const mainNavItems: NavItem[] = [
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/zeromsg/zeromsg-community',
+        title: 'Website',
+        href: 'https://ravisn.com',
         icon: FolderGit2,
     },
     {
         title: 'Documentation',
-        href: 'https://github.com/zeromsg/zeromsg-community#readme',
+        href: 'https://ravisn.com/docs',
         icon: BookOpen,
     },
 ];
@@ -44,7 +44,7 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link href={dashboard()} prefetch>
-                                <AppLogo />
+                                <AppLogo className="h-9 w-auto" />
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\WhatsappAccount;
 use App\Models\WhatsappChat;
 use App\Models\WhatsappMessage;
+use App\Services\WhatsApp\WebhookHandler;
 
 test('dashboard stats count all message sources correctly', function () {
     $tenant = Tenant::create([
@@ -177,7 +178,7 @@ test('webhook updates whatsapp_messages status on delivery receipt', function ()
     ]);
 
     // Simulate webhook delivery status update
-    $handler = app(\App\Services\WhatsApp\WebhookHandler::class);
+    $handler = app(WebhookHandler::class);
     $handler->handle([
         'entry' => [
             [

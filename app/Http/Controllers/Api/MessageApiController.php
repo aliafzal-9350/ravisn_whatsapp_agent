@@ -163,7 +163,6 @@ class MessageApiController extends Controller
                 }
             }
 
-
             $message = $chat->messages()->create([
                 'direction' => 'outbound',
                 'message_type' => 'template',

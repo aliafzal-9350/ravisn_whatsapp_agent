@@ -622,7 +622,7 @@ export default function AccountsIndex({
                                                                 </span>
                                                                 <span className="leading-relaxed">
                                                                     {
-                                                                        'Click Edit under Webhooks. Paste the Callback URL shown on the right, input the Verify Token (e.g. zeromsg), and save.'
+                                                                        'Click Edit under Webhooks. Paste the Callback URL shown on the right, input the Verify Token (e.g. ravisn), and save.'
                                                                     }
                                                                 </span>
                                                             </li>

@@ -57,6 +57,7 @@ Route::middleware(['auth', 'verified', 'client'])
             Route::get('inbox', [InboxController::class, 'index'])->name('inbox.index');
             Route::get('inbox/chats/{chat}/messages', [InboxController::class, 'messages'])->name('inbox.messages');
             Route::post('inbox/chats/{chat}/send', [InboxController::class, 'sendMessage'])->name('inbox.send');
+            Route::post('inbox/chats/{chat}/toggle-ai', [InboxController::class, 'toggleAi'])->name('inbox.toggle-ai');
 
             // Developer Panel
             Route::get('developer', [DeveloperController::class, 'index'])->name('developer.index');
@@ -67,6 +68,7 @@ Route::middleware(['auth', 'verified', 'client'])
             Route::delete('developer/webhooks/{webhook}', [DeveloperController::class, 'destroyWebhook'])->name('developer.webhooks.destroy');
 
             // Automation Flows
+            Route::put('automations/strategy', [AutomationFlowController::class, 'updateStrategy'])->name('automations.strategy');
             Route::post('automations/import', [AutomationFlowController::class, 'import'])->name('automations.import');
             Route::get('automations/{automation}/export', [AutomationFlowController::class, 'export'])->name('automations.export');
             Route::resource('automations', AutomationFlowController::class)->except(['show']);

@@ -9,6 +9,7 @@ use App\Models\WhatsappChat;
 use App\Services\WhatsApp\WhatsAppCloudApi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -66,6 +67,7 @@ class InboxController extends Controller
                         'last_message_at' => $chat->last_message_at?->toIso8601String(),
                         'session_remaining' => $sessionRemaining,
                         'is_session_open' => $sessionRemaining > 0 && $sessionRemaining !== null,
+                        'is_ai_active' => (bool) ($chat->is_ai_active ?? true),
                     ];
                 });
         }
@@ -87,6 +89,7 @@ class InboxController extends Controller
             'chats' => $chats,
             'selectedAccountId' => (int) $selectedAccountId,
             'templates' => $templates,
+            'activeStrategy' => $tenant->ai_strategy ?? 'lead_qualifier',
         ]);
     }
 
@@ -183,7 +186,6 @@ class InboxController extends Controller
 
                 $approxBody = $template->formatBodyText($validated['variables'] ?? []);
 
-
                 $message = $chat->messages()->create([
                     'direction' => 'outbound',
                     'message_type' => 'template',
@@ -194,11 +196,15 @@ class InboxController extends Controller
                 ]);
             }
 
-            $chat->update(['last_message_at' => now()]);
+            // Automatic Human Override (Auto-Pause): Human staff member sent message -> is_ai_active = false
+            $chat->update([
+                'last_message_at' => now(),
+                'is_ai_active' => false,
+            ]);
 
             return response()->json($message);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Inbox reply sending failed', [
+            Log::error('Inbox reply sending failed', [
                 'chat_id' => $chat->id,
                 'customer_phone' => $chat->customer_phone,
                 'error' => $e->getMessage(),
@@ -206,5 +212,26 @@ class InboxController extends Controller
 
             return response()->json(['error' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * Toggle or set AI active state for a specific chat.
+     */
+    public function toggleAi(Request $request, WhatsappChat $chat): JsonResponse
+    {
+        if ($chat->tenant_id !== $request->user()->tenant_id) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $isAiActive = $request->has('is_ai_active')
+            ? $request->boolean('is_ai_active')
+            : ! $chat->is_ai_active;
+
+        $chat->update(['is_ai_active' => $isAiActive]);
+
+        return response()->json([
+            'success' => true,
+            'is_ai_active' => $chat->is_ai_active,
+        ]);
     }
 }

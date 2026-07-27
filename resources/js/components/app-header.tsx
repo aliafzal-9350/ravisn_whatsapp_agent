@@ -63,12 +63,12 @@ const mainNavItems: NavItem[] = [
 const rightNavItems: NavItem[] = [
     {
         title: 'Repository',
-        href: 'https://github.com/zeromsg/zeromsg-community',
+        href: 'https://ravisn.com',
         icon: Folder,
     },
     {
         title: 'Documentation',
-        href: 'https://github.com/zeromsg/zeromsg-community#readme',
+        href: 'https://ravisn.com/docs',
         icon: BookOpen,
     },
 ];
@@ -168,7 +168,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         prefetch
                         className="flex items-center space-x-2"
                     >
-                        <AppLogo />
+                        <AppLogo className="h-9 w-auto" />
                     </Link>
 
                     {/* Desktop Navigation */}

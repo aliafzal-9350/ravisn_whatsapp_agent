@@ -169,7 +169,7 @@ export default function DeveloperIndex({
   -d '{
     "phone_number_id": "985357101336442",
     "to": "+12125550198",
-    "body": "Hello, this is a test text message sent via ZeroMsg API!"
+    "body": "Hello, this is a test text message sent via RAVISN API!"
   }'`;
 
     const curlSendTemplate = `curl -X POST "${hostUrl}/api/v1/messages/send-template" \\
@@ -181,7 +181,7 @@ export default function DeveloperIndex({
     "to": "+12125550198",
     "template_name": "verify_otp_usecase",
     "language": "en",
-    "variables": ["123456", "ZeroMsg"]
+    "variables": ["123456", "RAVISN"]
   }'`;
 
     return (
@@ -309,7 +309,7 @@ export default function DeveloperIndex({
                                 </h3>
                                 <p className="text-xs text-muted-foreground">
                                     Use these secure API keys to integrate
-                                    ZeroMsg with platforms like Zapier, CRM
+                                    RAVISN with platforms like Zapier, CRM
                                     systems, or custom backends.
                                 </p>
                             </div>
@@ -877,7 +877,7 @@ export default function DeveloperIndex({
                                 placeholder="https://yourdomain.com/webhooks/whatsapp"
                             />
                             <span className="text-[10px] text-muted-foreground">
-                                Must be a valid HTTP/HTTPS URL. ZeroMsg sends
+                                Must be a valid HTTP/HTTPS URL. RAVISN sends
                                 real-time POST payloads to this URL.
                             </span>
                         </div>

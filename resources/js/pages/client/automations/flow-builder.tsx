@@ -411,7 +411,7 @@ function createAction(type: ActionType, groups: Group[]): Action {
     if (type === 'send_email') {
         return {
             type,
-            subject: 'ZeroMsg automation update',
+            subject: 'RAVISN automation update',
             email_to: 'support@example.com',
             text: 'Default email body',
         };
@@ -1915,7 +1915,7 @@ export function FlowBuilder({ groups, flow }: FlowBuilderProps) {
     const exportCurrentFlow = () => {
         const payload = {
             version: 1,
-            type: 'zeromsg.automation_flow',
+            type: 'ravisn.automation_flow',
             flow: {
                 name: formData.name || 'Untitled Flow',
                 trigger_type: 'keyword',
@@ -2811,7 +2811,7 @@ export function FlowBuilder({ groups, flow }: FlowBuilderProps) {
                             </button>
                             <div className="text-left">
                                 <div className="flex items-center justify-start gap-1.5 text-sm font-black">
-                                    <span>ZeroMsg Bot</span>
+                                    <span>RAVISN Bot</span>
                                     <span className="h-2.5 w-2.5 animate-ping rounded-full bg-emerald-400"></span>
                                 </div>
                                 <div className="text-[10px] opacity-75">

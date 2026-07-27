@@ -91,7 +91,25 @@ class AutomationFlowController extends Controller
         return Inertia::render('client/automations/index', [
             'flows' => $flows,
             'groups' => $groups,
+            'activeStrategy' => $tenant->ai_strategy ?? 'lead_qualifier',
         ]);
+    }
+
+    /**
+     * Update tenant master AI automation strategy.
+     */
+    public function updateStrategy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'strategy' => ['required', 'string', 'in:lead_qualifier,faq_responder,pure_manual'],
+        ]);
+
+        $tenant = $request->user()->tenant;
+        $tenant->update(['ai_strategy' => $validated['strategy']]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Automation strategy updated successfully!')]);
+
+        return to_route('client.automations.index');
     }
 
     /**
@@ -209,7 +227,7 @@ class AutomationFlowController extends Controller
         return response()
             ->json([
                 'version' => 1,
-                'type' => 'zeromsg.automation_flow',
+                'type' => 'ravisn.automation_flow',
                 'flow' => [
                     'name' => $automation->name,
                     'trigger_type' => $automation->trigger_type,

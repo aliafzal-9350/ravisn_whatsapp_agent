@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'whatsapp_account_id', 'customer_phone', 'customer_name', 'last_message_at'])]
+#[Fillable(['tenant_id', 'whatsapp_account_id', 'customer_phone', 'customer_name', 'last_message_at', 'is_ai_active'])]
 class WhatsappChat extends Model
 {
     use HasFactory;
@@ -17,6 +17,7 @@ class WhatsappChat extends Model
     {
         return [
             'last_message_at' => 'datetime',
+            'is_ai_active' => 'boolean',
         ];
     }
 

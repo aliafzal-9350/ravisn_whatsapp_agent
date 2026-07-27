@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'email', 'status', 'meta_business_id', 'webhook_token'])]
+#[Fillable(['name', 'email', 'status', 'meta_business_id', 'webhook_token', 'ai_strategy'])]
 class Tenant extends Model
 {
     /** @use HasFactory<TenantFactory> */
@@ -54,8 +54,6 @@ class Tenant extends Model
     {
         return $this->hasMany(Campaign::class);
     }
-
-
 
     /**
      * Get the contacts for the tenant.

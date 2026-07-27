@@ -11,7 +11,7 @@ class WhatsAppCloudApi
     protected string $apiUrl;
 
     protected string $apiVersion;
- 
+
     /**
      * Create a new WhatsApp Cloud API instance.
      */

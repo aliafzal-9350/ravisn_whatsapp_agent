@@ -60,7 +60,7 @@ test('api send-text succeeds for the mock number +12125550198', function () {
     ])->postJson('/api/v1/messages/send-text', [
         'phone_number_id' => '985357101336442',
         'to' => '+12125550198',
-        'body' => 'Hello, this is a test text message sent via ZeroMsg API!',
+        'body' => 'Hello, this is a test text message sent via RAVISN API!',
     ]);
 
     $response->assertOk();
@@ -76,7 +76,7 @@ test('api send-text succeeds for the mock number +12125550198', function () {
     $this->assertDatabaseHas('whatsapp_messages', [
         'whatsapp_chat_id' => $chat->id,
         'direction' => 'outbound',
-        'body' => 'Hello, this is a test text message sent via ZeroMsg API!',
+        'body' => 'Hello, this is a test text message sent via RAVISN API!',
         'meta_message_id' => $messageId,
         'status' => 'sent',
     ]);

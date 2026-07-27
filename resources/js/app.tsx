@@ -7,7 +7,7 @@ import AuthLayout from '@/layouts/auth-layout';
 import ClientLayout from '@/layouts/client-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'ZeroMsg';
+const appName = import.meta.env.VITE_APP_NAME || 'RAVISN';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

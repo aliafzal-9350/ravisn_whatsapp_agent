@@ -10,6 +10,7 @@ import {
     Zap,
     ArrowRight,
 } from 'lucide-react';
+import { ApiUsageWidget, ApiUsage } from '@/components/api-usage-widget';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -65,6 +66,7 @@ interface ClientDashboardProps {
     recentCampaigns: RecentCampaign[];
     weeklyActivity: WeeklyActivityDay[];
     deliveryStatus: DeliveryStatus;
+    apiUsage?: ApiUsage;
 }
 
 export default function ClientDashboard({
@@ -72,6 +74,7 @@ export default function ClientDashboard({
     recentCampaigns,
     weeklyActivity,
     deliveryStatus,
+    apiUsage,
 }: ClientDashboardProps) {
     const totalDelivered = stats.totalDelivered;
     const totalSent = stats.totalMessagesSent;
@@ -222,6 +225,9 @@ export default function ClientDashboard({
                         </div>
                     </div>
                 </div>
+
+                {/* WhatsApp API Usage Widget */}
+                <ApiUsageWidget apiUsage={apiUsage} />
 
                 {/* Statistics Highlights */}
                 <div className="space-y-4">

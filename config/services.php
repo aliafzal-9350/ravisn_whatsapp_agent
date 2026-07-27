@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'facebook' => [
+        'app_id' => env('FACEBOOK_APP_ID'),
+        'app_secret' => env('FACEBOOK_APP_SECRET'),
+    ],
+
+    'meta' => [
+        'access_token' => env('META_ACCESS_TOKEN'),
+        'waba_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
+    ],
+
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+    ],
+
 ];

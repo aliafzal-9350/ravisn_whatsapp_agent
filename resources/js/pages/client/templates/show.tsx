@@ -41,11 +41,16 @@ export default function TemplateShow({ template }: TemplateShowProps) {
         (c) => c.type === 'BUTTONS',
     );
 
-    const headerType = headerComponent?.format === 'TEXT' ? 'TEXT' : 'NONE';
+    const headerFormatRaw = headerComponent?.format ?? 'NONE';
+    const validHeaderTypes = ['TEXT', 'IMAGE', 'VIDEO', 'DOCUMENT', 'NONE'] as const;
+    const headerType = validHeaderTypes.includes(headerFormatRaw)
+        ? (headerFormatRaw as (typeof validHeaderTypes)[number])
+        : 'NONE';
     const headerText = headerComponent?.text || '';
     const bodyText = bodyComponent?.text || '';
     const footerText = footerComponent?.text || '';
     const buttons = buttonsComponent?.buttons || [];
+    const isMediaHeader = ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerType);
 
     return (
         <>
@@ -220,6 +225,11 @@ export default function TemplateShow({ template }: TemplateShowProps) {
                                     language={template.language}
                                     headerType={headerType}
                                     headerText={headerText}
+                                    headerMediaType={
+                                        isMediaHeader
+                                            ? (headerType as 'IMAGE' | 'VIDEO' | 'DOCUMENT')
+                                            : undefined
+                                    }
                                     bodyText={bodyText}
                                     footerText={footerText}
                                     buttons={buttons}

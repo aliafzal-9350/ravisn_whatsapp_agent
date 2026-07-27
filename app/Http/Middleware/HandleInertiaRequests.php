@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\SystemNotification;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Laravel\Fortify\Features;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -87,7 +88,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
-            'passkeysEnabled' => \Laravel\Fortify\Features::enabled(\Laravel\Fortify\Features::passkeys()),
+            'passkeysEnabled' => Features::enabled(Features::passkeys()),
             'whatsapp_app_id' => config('whatsapp.app_id', ''),
             'whatsapp_config_id' => config('whatsapp.config_id', ''),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

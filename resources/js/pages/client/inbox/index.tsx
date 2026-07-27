@@ -14,6 +14,9 @@ import {
     X,
     BarChart3,
     Database,
+    Bot,
+    UserCheck,
+    Play,
 } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
@@ -33,6 +36,7 @@ interface Chat {
     last_message_at: string | null;
     session_remaining?: number | null;
     is_session_open?: boolean;
+    is_ai_active?: boolean;
 }
 
 interface Message {
@@ -58,6 +62,7 @@ interface InboxProps {
     chats: Chat[];
     selectedAccountId: number;
     templates: MessageTemplate[];
+    activeStrategy?: 'lead_qualifier' | 'faq_responder' | 'pure_manual';
 }
 
 // Live relative time formatter
@@ -192,6 +197,7 @@ export default function InboxIndex({
     chats,
     selectedAccountId,
     templates = [],
+    activeStrategy = 'lead_qualifier',
 }: InboxProps) {
     const [selectedChat, setSelectedChat] = React.useState<Chat | null>(null);
     const [messages, setMessages] = React.useState<Message[]>([]);
@@ -266,6 +272,39 @@ export default function InboxIndex({
         return () => clearInterval(interval);
     }, [selectedChat, fetchMessages]);
 
+    const handleResumeAi = async () => {
+        if (!selectedChat) return;
+
+        try {
+            const res = await fetch(
+                `/dashboard/inbox/chats/${selectedChat.id}/toggle-ai`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN':
+                            (
+                                document.querySelector(
+                                    'meta[name="csrf-token"]',
+                                ) as any
+                            )?.content || '',
+                    },
+                    body: JSON.stringify({ is_ai_active: true }),
+                },
+            );
+
+            if (res.ok) {
+                const data = await res.json();
+                setSelectedChat((prev) =>
+                    prev ? { ...prev, is_ai_active: data.is_ai_active } : null,
+                );
+                toast.success('AI Assistant resumed for this chat!');
+            }
+        } catch {
+            toast.error('Failed to resume AI assistant.');
+        }
+    };
+
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -318,7 +357,10 @@ export default function InboxIndex({
                 setNewMessage('');
                 setTemplateVars([]);
                 setSelectedTemplateId('');
-                toast.success('Message sent successfully!');
+                setSelectedChat((prev) =>
+                    prev ? { ...prev, is_ai_active: false } : null,
+                );
+                toast.success('Message sent successfully! (AI Paused)');
             } else {
                 const errorData = await res.json();
                 toast.error(errorData.error || 'Failed to send message.');
@@ -555,7 +597,7 @@ export default function InboxIndex({
                                             {selectedChat.customer_name ||
                                                 selectedChat.customer_phone}
                                         </h4>
-                                        <div className="mt-0.5 flex items-center gap-2">
+                                        <div className="mt-0.5 flex flex-wrap items-center gap-2">
                                             <span className="font-mono text-[10px] text-muted-foreground">
                                                 {selectedChat.customer_phone}
                                             </span>
@@ -572,6 +614,28 @@ export default function InboxIndex({
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                                                     <ShieldAlert className="h-2.5 w-2.5 text-amber-600 dark:text-amber-400" />
                                                     <span>Session Closed</span>
+                                                </span>
+                                            )}
+
+                                            {/* STATUS BADGES IN CHAT HEADER */}
+                                            {selectedChat.is_ai_active && activeStrategy === 'lead_qualifier' && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[9px] font-extrabold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-500/30 shadow-xs">
+                                                    <Bot className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                                    <span>🤖 AI Active (Lead Qualifier)</span>
+                                                </span>
+                                            )}
+
+                                            {selectedChat.is_ai_active && activeStrategy === 'faq_responder' && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2.5 py-0.5 text-[9px] font-extrabold text-sky-700 dark:bg-sky-500/20 dark:text-sky-300 border border-sky-500/30 shadow-xs">
+                                                    <Bot className="h-3 w-3 text-sky-600 dark:text-sky-400" />
+                                                    <span>🤖 AI Active (FAQ Only)</span>
+                                                </span>
+                                            )}
+
+                                            {(!selectedChat.is_ai_active || activeStrategy === 'pure_manual') && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[9px] font-extrabold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-500/30 shadow-xs">
+                                                    <UserCheck className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                                    <span>👤 Human Control (AI Paused)</span>
                                                 </span>
                                             )}
                                         </div>
@@ -673,6 +737,28 @@ export default function InboxIndex({
                                 onSubmit={handleSendMessage}
                                 className="flex flex-col gap-2 border-t bg-background p-4"
                             >
+                                {/* AUTOMATIC HUMAN OVERRIDE (AUTO-PAUSE) BANNER */}
+                                {(!selectedChat.is_ai_active || activeStrategy === 'pure_manual') && (
+                                    <div className="mx-1 mb-2 flex items-center justify-between gap-2.5 rounded-lg border border-amber-300 bg-amber-50/90 p-3 dark:border-amber-900/60 dark:bg-amber-950/40 shadow-xs">
+                                        <div className="flex items-center gap-2 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                                            <UserCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                            <span>AI is currently paused for this chat.</span>
+                                        </div>
+                                        {activeStrategy !== 'pure_manual' && (
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleResumeAi}
+                                                className="h-7 gap-1.5 border-amber-400 bg-amber-100/60 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-100"
+                                            >
+                                                <Play className="h-3 w-3 fill-current text-emerald-600 dark:text-emerald-400" />
+                                                <span>Resume AI Assistant</span>
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* Warning Alert if session is closed */}
                                 {!selectedChat.is_session_open && (
                                     <div className="mx-1 mb-2 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
