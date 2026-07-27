@@ -1,4 +1,4 @@
-# 💬 ZeroMsg — Self-Hosted WhatsApp Cloud API Platform
+# 💬 RAVISN — Self-Hosted WhatsApp Cloud API Platform
 
 > **Modern, self-hosted platform for WhatsApp Cloud API management: live customer inbox, bulk marketing campaigns, visual automation flows, official Meta message template sync, and developer REST APIs.**
 
@@ -6,7 +6,7 @@
 
 ## 🌟 Overview
 
-**ZeroMsg** is an all-in-one open-source/self-hosted WhatsApp Business Solution Provider (BSP) dashboard and automated marketing engine built on top of **Laravel 13**, **Inertia.js v3**, **React 19**, and **Tailwind CSS v4**.
+**Ravisn** is an all-in-one open-source/self-hosted WhatsApp Business Solution Provider (BSP) dashboard and automated marketing engine built on top of **Laravel 13**, **Inertia.js v3**, **React 19**, and **Tailwind CSS v4**.
 
 It connects directly with official **Meta WhatsApp Cloud API**, enabling businesses, agencies, and developers to manage live customer conversations, launch automated marketing campaigns, design interactive chatbot automation flows, and integrate WhatsApp messaging into custom software applications.
 
@@ -71,18 +71,10 @@ It connects directly with official **Meta WhatsApp Cloud API**, enabling busines
 
 ---
 
-## 🚀 Quick Start & Installation
 
-### 1. Clone the Repository
+. Run Automatic Setup
 
-```bash
-git clone https://github.com/megoxv/zeromsg.git
-cd zeromsg
-```
-
-### 2. Run Automatic Setup
-
-ZeroMsg includes built-in setup scripts to install dependencies, generate application keys, configure the database, and build frontend assets.
+Ravisn includes built-in setup scripts to install dependencies, generate application keys, configure the database, and build frontend assets.
 
 ```bash
 composer run setup
@@ -148,17 +140,17 @@ FACEBOOK_APP_SECRET="your-facebook-app-secret"
 
 4. Configure Webhooks in the Meta Developer Portal:
    - **Callback URL**: `https://your-domain.com/webhook/whatsapp`
-   - **Verify Token**: Set in your tenant/account settings in the ZeroMsg dashboard.
+   - **Verify Token**: Set in your tenant/account settings 
    - **Subscribed Fields**: `messages`, `message_template_status_update`.
 
 ---
 
 ## 🔌 Developer REST API Reference
 
-ZeroMsg provides a Developer API for programmatically sending WhatsApp messages.
+Ravisn provides a Developer API for programmatically sending WhatsApp messages.
 
 ### Authentication
-Include your ZeroMsg API Key in the HTTP headers:
+Include your ravisn API Key in the HTTP headers:
 ```http
 Authorization: Bearer YOUR_API_KEY
 ```
@@ -169,7 +161,7 @@ Authorization: Bearer YOUR_API_KEY
 ```json
 {
   "to": "+1234567890",
-  "message": "Hello from ZeroMsg developer API!"
+  "message": "Hello from developer API!"
 }
 ```
 
@@ -189,7 +181,7 @@ Authorization: Bearer YOUR_API_KEY
 
 ## 🧪 Testing & Code Quality
 
-ZeroMsg follows strict code quality and automated testing standards.
+ follows strict code quality and automated testing standards.
 
 ```bash
 # Run Pest test suite
@@ -213,7 +205,7 @@ npm run format:check
 ## 📜 Repository Structure
 
 ```
-zeromsg/
+Ravsin/
 ├── app/
 │   ├── Http/Controllers/     # Client, API & Webhook controllers
 │   ├── Models/               # Eloquent Models (Tenant, Campaign, Contact, etc.)
