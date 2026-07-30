@@ -322,6 +322,14 @@ export default function Privacy() {
                                 Privacy Policy
                             </Link>
                             <span>&bull;</span>
+                            <Link href="/terms" className="hover:text-slate-600 dark:hover:text-slate-200">
+                                Terms of Service
+                            </Link>
+                            <span>&bull;</span>
+                            <Link href="/data-deletion" className="hover:text-slate-600 dark:hover:text-slate-200">
+                                Data Deletion
+                            </Link>
+                            <span>&bull;</span>
                             <Link href="/login" className="hover:text-slate-600 dark:hover:text-slate-200">
                                 Login
                             </Link>

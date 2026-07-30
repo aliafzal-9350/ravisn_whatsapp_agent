@@ -20,6 +20,14 @@ Route::get('/privacy', function () {
     return Inertia::render('Privacy');
 })->name('privacy');
 
+Route::get('/data-deletion', function () {
+    return Inertia::render('DataDeletion');
+})->name('data-deletion');
+
+Route::get('/terms', function () {
+    return Inertia::render('Terms');
+})->name('terms');
+
 require __DIR__.'/settings.php';
 
 // Webhook Routes
