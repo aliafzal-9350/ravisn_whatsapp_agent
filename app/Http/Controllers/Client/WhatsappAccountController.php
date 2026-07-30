@@ -275,9 +275,9 @@ class WhatsappAccountController extends Controller
         try {
             if ($request->code) {
                 // Exchange authorization code for access token
-                $exchangeResponse = Http::post('https://graph.facebook.com/v25.0/oauth/access_token', [
-                    'client_id' => config('whatsapp.app_id'),
-                    'client_secret' => config('whatsapp.app_secret'),
+                $exchangeResponse = Http::post('https://graph.facebook.com/v20.0/oauth/access_token', [
+                    'client_id' => config('services.whatsapp.app_id', config('whatsapp.app_id')),
+                    'client_secret' => config('services.whatsapp.app_secret', config('whatsapp.app_secret')),
                     'grant_type' => 'authorization_code',
                     'code' => $request->code,
                     'redirect_uri' => '', // blank string works for JS SDK code exchange

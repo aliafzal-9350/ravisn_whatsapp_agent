@@ -49,4 +49,10 @@ return [
         'key' => env('GEMINI_API_KEY'),
     ],
 
+    'whatsapp' => [
+        'app_id' => env('WHATSAPP_APP_ID'),
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+        'config_id' => env('WHATSAPP_CONFIG_ID'),
+    ],
+
 ];

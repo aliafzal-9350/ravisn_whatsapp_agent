@@ -59,20 +59,19 @@ export default function AccountsIndex({
             return;
         }
 
-        (window as any).fbAsyncInit = function () {
-            (window as any).FB.init({
-                appId: whatsapp_app_id,
-                cookie: true,
-                xfbml: true,
-                version: 'v25.0',
-            });
-        };
-
-        const script = document.createElement('script');
-        script.src = 'https://connect.facebook.net/en_US/sdk.js';
-        script.async = true;
-        script.defer = true;
-        document.body.appendChild(script);
+        // FB SDK is loaded globally from app.blade.php.
+        // Re-assign fbAsyncInit here as a safety fallback in case the SDK
+        // fires after React mounts (e.g. on a slow connection).
+        if (!(window as any).FB) {
+            (window as any).fbAsyncInit = function () {
+                (window as any).FB.init({
+                    appId: whatsapp_app_id,
+                    cookie: true,
+                    xfbml: true,
+                    version: 'v20.0',
+                });
+            };
+        }
     }, [whatsapp_app_id]);
 
     const handleFacebookLogin = () => {
