@@ -12,8 +12,13 @@ use App\Http\Controllers\Client\WhatsappAccountController;
 use App\Http\Controllers\Webhook\WhatsAppWebhookController;
 use App\Models\SystemNotification;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::redirect('/', '/login')->name('home');
+
+Route::get('/privacy', function () {
+    return Inertia::render('Privacy');
+})->name('privacy');
 
 require __DIR__.'/settings.php';
 
