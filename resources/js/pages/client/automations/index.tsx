@@ -39,7 +39,9 @@ export default function AutomationsIndex({
     const handleSelectStrategy = (
         strategy: 'lead_qualifier' | 'faq_responder' | 'pure_manual',
     ) => {
-        if (strategy === activeStrategy || updatingStrategy) return;
+        if (strategy === activeStrategy || updatingStrategy) {
+return;
+}
 
         setUpdatingStrategy(true);
         router.put(

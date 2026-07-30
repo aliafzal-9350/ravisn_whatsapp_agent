@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { BookOpen, FolderGit2, LayoutGrid, ShieldCheck, FileText, Trash2 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -33,6 +33,21 @@ const footerNavItems: NavItem[] = [
         title: 'Documentation',
         href: 'https://ravisn.com/docs',
         icon: BookOpen,
+    },
+    {
+        title: 'Privacy',
+        href: '/privacy',
+        icon: ShieldCheck,
+    },
+    {
+        title: 'Terms',
+        href: '/terms',
+        icon: FileText,
+    },
+    {
+        title: 'Data Deletion',
+        href: '/data-deletion',
+        icon: Trash2,
     },
 ];
 

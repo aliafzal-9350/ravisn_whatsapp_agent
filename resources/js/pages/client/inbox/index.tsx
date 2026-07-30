@@ -273,7 +273,9 @@ export default function InboxIndex({
     }, [selectedChat, fetchMessages]);
 
     const handleResumeAi = async () => {
-        if (!selectedChat) return;
+        if (!selectedChat) {
+return;
+}
 
         try {
             const res = await fetch(

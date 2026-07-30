@@ -10,7 +10,8 @@ import {
     Zap,
     ArrowRight,
 } from 'lucide-react';
-import { ApiUsageWidget, ApiUsage } from '@/components/api-usage-widget';
+import type { ApiUsage } from '@/components/api-usage-widget';
+import { ApiUsageWidget } from '@/components/api-usage-widget';
 import { Button } from '@/components/ui/button';
 import {
     Card,

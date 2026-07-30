@@ -1,5 +1,5 @@
-import React from 'react';
 import { DollarSign, Megaphone, MessageSquare, Send, ShieldCheck, Wrench } from 'lucide-react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export interface CategoryUsage {
