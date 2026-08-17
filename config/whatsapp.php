@@ -39,6 +39,10 @@ return [
 
     'config_id' => env('WHATSAPP_CONFIG_ID'),
 
+    // Redirect URI used for Meta Embedded Signup (optional but recommended).
+    // Example: https://app.ravisnapp.com/api/whatsapp/embedded-signup/callback
+    'embedded_redirect_uri' => env('WHATSAPP_EMBEDDED_REDIRECT_URI', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Rate Limiting
