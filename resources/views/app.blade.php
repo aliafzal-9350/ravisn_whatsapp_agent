@@ -39,14 +39,14 @@
         </x-inertia::head>
 
         {{-- Meta Facebook JavaScript SDK for WhatsApp Embedded Signup --}}
-        @if(config('services.whatsapp.app_id'))
+        @if(config('whatsapp.app_id', config('services.whatsapp.app_id')))
         <script>
             window.fbAsyncInit = function() {
                 FB.init({
-                    appId      : '{{ config("services.whatsapp.app_id") }}',
+                    appId      : '{{ config("whatsapp.app_id", config("services.whatsapp.app_id")) }}',
                     cookie     : true,
                     xfbml      : true,
-                    version    : 'v20.0'
+                    version    : 'v21.0'
                 });
             };
         </script>
