@@ -275,12 +275,18 @@ class WhatsappAccountController extends Controller
         try {
             if ($request->code) {
                 // Exchange authorization code for access token
-                $exchangeResponse = Http::post('https://graph.facebook.com/v20.0/oauth/access_token', [
-                    'client_id' => config('services.whatsapp.app_id', config('whatsapp.app_id')),
-                    'client_secret' => config('services.whatsapp.app_secret', config('whatsapp.app_secret')),
+                $graphVersion = config('whatsapp.api_version', 'v21.0');
+                $clientId = config('whatsapp.app_id', config('services.whatsapp.app_id'));
+                $clientSecret = config('whatsapp.app_secret', config('services.whatsapp.app_secret'));
+                // Allow a configurable redirect URI for embedded signup (recommended)
+                $redirectUri = config('whatsapp.embedded_redirect_uri', env('WHATSAPP_EMBEDDED_REDIRECT_URI', ''));
+
+                $exchangeResponse = Http::post("https://graph.facebook.com/{$graphVersion}/oauth/access_token", [
+                    'client_id' => $clientId,
+                    'client_secret' => $clientSecret,
                     'grant_type' => 'authorization_code',
                     'code' => $request->code,
-                    'redirect_uri' => '', // blank string works for JS SDK code exchange
+                    'redirect_uri' => $redirectUri, // use configured redirect URI
                 ]);
 
                 if ($exchangeResponse->failed()) {
