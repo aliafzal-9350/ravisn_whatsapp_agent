@@ -4,12 +4,11 @@ namespace App\Jobs;
 
 use App\Models\Campaign;
 use App\Models\CampaignRecipient;
-use App\Models\SystemNotification;
+use App\Models\Contact;
 use App\Services\WhatsApp\WhatsAppCloudApi;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Http\Client\Response;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
@@ -18,138 +17,108 @@ class SendCampaignMessage implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * The number of times the job may be attempted.
-     */
     public int $tries = 3;
+    public array $backoff = [5, 20, 60];
+    public int $timeout = 30;
 
-    /**
-     * The number of seconds to wait before retrying.
-     */
-    public int $backoff = 10;
-
-    /**
-     * Create a new job instance.
-     */
     public function __construct(
         public Campaign $campaign,
-        public CampaignRecipient $recipient,
-    ) {}
+        public CampaignRecipient $recipient
+    ) {
+        $this->onQueue('campaigns');
+    }
 
-    /**
-     * Execute the job.
-     */
     public function handle(WhatsAppCloudApi $whatsAppApi): void
     {
-        // Skip if campaign is paused or recipient already processed
-        if ($this->campaign->status === 'paused' || $this->recipient->status !== 'pending') {
+        // 1. Skip if contact opted out
+        $contact = Contact::where('tenant_id', $this->campaign->tenant_id)
+            ->where('phone', $this->recipient->phone_number)
+            ->first();
+
+        if ($contact && ($contact->is_opted_out ?? false)) {
+            $this->recipient->update([
+                'status' => 'failed',
+                'error_message' => 'Contact previously opted out (STOP).',
+            ]);
+            $this->campaign->increment('failed_count');
             return;
         }
 
-        $tenant = $this->campaign->tenant;
         $account = $this->campaign->whatsappAccount;
+        if (! $account) {
+            $this->recipient->update([
+                'status' => 'failed',
+                'error_message' => 'WhatsApp account not configured.',
+            ]);
+            $this->campaign->increment('failed_count');
+            return;
+        }
+
+        if ($account->access_token) {
+            $whatsAppApi->withToken($account->access_token);
+        }
+
+        $template = $this->campaign->messageTemplate;
+        if (! $template) {
+            $this->recipient->update([
+                'status' => 'failed',
+                'error_message' => 'Template not found.',
+            ]);
+            $this->campaign->increment('failed_count');
+            return;
+        }
 
         try {
-            // Configure custom token if account has one (Embedded Signup)
-            if ($account->access_token) {
-                $whatsAppApi->withToken($account->access_token);
+            $variables = $this->recipient->variables ?? [];
+            $components = ! empty($variables) ? $template->getTemplateComponents($variables) : [];
+
+            $response = $whatsAppApi->sendTemplateMessage(
+                $account->phone_number_id,
+                $this->recipient->phone_number,
+                $template->name,
+                $template->language,
+                $components
+            );
+
+            if ($response->successful()) {
+                $wamid = $response->json('messages.0.id');
+                $this->recipient->update([
+                    'status' => 'sent',
+                    'whatsapp_message_id' => $wamid,
+                    'sent_at' => now(),
+                    'error_message' => null,
+                ]);
+
+                $this->campaign->increment('sent_count');
+            } else {
+                $status = $response->status();
+                $errBody = $response->json('error.message', 'Unknown Meta Error');
+
+                if ($status === 429 || $response->json('error.code') === 130429) {
+                    $this->release(30);
+                    return;
+                }
+
+                $this->recipient->update([
+                    'status' => 'failed',
+                    'error_message' => "Meta Error ({$status}): {$errBody}",
+                ]);
+                $this->campaign->increment('failed_count');
             }
-
-            $response = $this->campaign->message_type === 'direct'
-                ? $whatsAppApi->sendTextMessage(
-                    $account->phone_number_id,
-                    $this->recipient->phone_number,
-                    $this->campaign->direct_message_body ?? '',
-                )
-                : $this->sendTemplateMessage($whatsAppApi, $account->phone_number_id);
-
-            $messageId = $response->json('messages.0.id');
-
-            $this->recipient->update([
-                'status' => 'sent',
-                'whatsapp_message_id' => $messageId,
-                'sent_at' => now(),
-            ]);
-
-            // Update campaign counter
-            $this->campaign->increment('sent_count');
-
-            $this->checkCampaignCompletion();
-
-        } catch (\Exception $e) {
-            Log::error('Failed to send campaign message', [
-                'campaign_id' => $this->campaign->id,
+        } catch (\Throwable $e) {
+            Log::error('SendCampaignMessage job exception', [
                 'recipient_id' => $this->recipient->id,
                 'error' => $e->getMessage(),
             ]);
 
-            $this->recipient->update([
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-
-            $this->campaign->increment('failed_count');
-
-            // Check if campaign is completed after failure
-            $this->checkCampaignCompletion();
-        }
-    }
-
-    /**
-     * Send a templated WhatsApp campaign message.
-     */
-    protected function sendTemplateMessage(WhatsAppCloudApi $whatsAppApi, string $phoneNumberId): Response
-    {
-        $template = $this->campaign->messageTemplate;
-        $components = [];
-
-        if ($this->recipient->template_variables) {
-            $components = $template->getTemplateComponents($this->recipient->template_variables);
-        }
-
-        return $whatsAppApi->sendTemplateMessage(
-            $phoneNumberId,
-            $this->recipient->phone_number,
-            $template->name,
-            $template->language,
-            $components,
-        );
-    }
-
-    /**
-     * Calculate the cost for this message based on country pricing.
-     */
-    protected function calculateCost(): float
-    {
-        // Default fallback cost
-        return 0.05;
-    }
-
-    /**
-     * Check if the campaign has finished processing all recipients.
-     */
-    protected function checkCampaignCompletion(): void
-    {
-        $campaign = $this->campaign->fresh();
-
-        if (! $campaign || $campaign->status !== 'processing') {
-            return;
-        }
-
-        if ($campaign->hasProcessedAllRecipients()) {
-            $campaign->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-            ]);
-
-            // Notify if failures occurred
-            if ($campaign->failed_count > 0) {
-                SystemNotification::create([
-                    'tenant_id' => $campaign->tenant_id,
-                    'title' => 'فشل جزئي أو كلي في إرسال الحملة',
-                    'message' => "اكتملت الحملة \"{$campaign->name}\" مع فشل إرسال {$campaign->failed_count} رسالة من أصل {$campaign->total_recipients}.",
-                    'type' => 'error',
+            if ($this->attempts() < $this->tries) {
+                $this->release(10);
+            } else {
+                $this->recipient->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
                 ]);
+                $this->campaign->increment('failed_count');
             }
         }
     }

@@ -83,7 +83,7 @@ export default function AccountsIndex({
 
         (window as any).FB.login(
             (response: any) => {
-                if (response.authResponse && response.authResponse.code) {
+                if (response.authResponse) {
                     const code = response.authResponse.code;
                     router.post(
                         '/dashboard/whatsapp-accounts/embedded-signup',
@@ -106,14 +106,14 @@ export default function AccountsIndex({
                 }
             },
             {
-                config_id: whatsapp_config_id ?? '1061983729651940',
+                config_id: whatsapp_config_id,
                 response_type: 'code',
                 override_default_response_type: true,
                 extras: {
-                    version: 'v4',
-                    sessionInfoVersion: 3,
-                    featureType: 'whatsapp_business_app_onboarding',
-                },
+            setup: {},
+            sessionInfoVersion: 3,
+            featureType: 'whatsapp_business_app_onboarding',
+        },
             },
         );
     };
@@ -402,7 +402,7 @@ export default function AccountsIndex({
                                                     className="h-4 w-4 fill-white"
                                                     viewBox="0 0 24 24"
                                                 >
-                                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 [...]" />
+                                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                                                 </svg>
                                                 <span>Link via Facebook</span>
                                             </Button>
@@ -437,7 +437,7 @@ export default function AccountsIndex({
                                                         <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-emerald-600 uppercase dark:text-emerald-400">
                                                             <BookOpen className="h-3.5 w-3.5" />
                                                             <span>
-                                                                Step {guideStep} 
+                                                                Step {guideStep}{' '}
                                                                 of 3
                                                             </span>
                                                         </h3>
@@ -462,7 +462,7 @@ export default function AccountsIndex({
                                                         </h4>
                                                         <ol className="space-y-3 text-[11px] text-muted-foreground">
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     1
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -485,7 +485,7 @@ export default function AccountsIndex({
                                                                 </span>
                                                             </li>
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     2
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -503,7 +503,7 @@ export default function AccountsIndex({
                                                                 </span>
                                                             </li>
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-655 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-655 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     3
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -520,7 +520,7 @@ export default function AccountsIndex({
                                                                 </span>
                                                             </li>
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     4
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -551,7 +551,7 @@ export default function AccountsIndex({
                                                         </h4>
                                                         <ol className="space-y-3 text-[11px] text-muted-foreground">
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     1
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -561,7 +561,7 @@ export default function AccountsIndex({
                                                                 </span>
                                                             </li>
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     2
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -571,7 +571,7 @@ export default function AccountsIndex({
                                                                 </span>
                                                             </li>
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     3
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -606,7 +606,7 @@ export default function AccountsIndex({
                                                         </h4>
                                                         <ol className="space-y-3 text-[11px] text-muted-foreground">
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-655 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-655 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     1
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -616,7 +616,7 @@ export default function AccountsIndex({
                                                                 </span>
                                                             </li>
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     2
                                                                 </span>
                                                                 <span className="leading-relaxed">
@@ -626,12 +626,13 @@ export default function AccountsIndex({
                                                                 </span>
                                                             </li>
                                                             <li className="flex gap-2.5">
-                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font[...]">
+                                                                <span className="text-emerald-650 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-[10px] font-bold dark:bg-emerald-500/20 dark:text-emerald-400">
                                                                     3
                                                                 </span>
                                                                 <span className="leading-relaxed">
                                                                     {
-                                                                        "Click Manage next to Webhook Fields, then click Subscribe next to the 'messages' row to receive incoming chats and deliver[...]
+                                                                        "Click Manage next to Webhook Fields, then click Subscribe next to the 'messages' row to receive incoming chats and delivery receipts."
+                                                                    }
                                                                 </span>
                                                             </li>
                                                         </ol>
@@ -673,7 +674,7 @@ export default function AccountsIndex({
                                         {/* Right Column: Credentials Form Card */}
                                         <form
                                             onSubmit={handleLinkSubmit}
-                                            className="flex flex-col justify-between gap-5 space-y-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900[...]"
+                                            className="flex flex-col justify-between gap-5 space-y-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/20"
                                         >
                                             <div className="space-y-4">
                                                 {/* Webhook URL Section */}
@@ -682,7 +683,7 @@ export default function AccountsIndex({
                                                         <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                                                             Your webhook URL
                                                         </span>
-                                                        <span className="inline-flex items-center gap-1 rounded bg-emerald-100/80 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:bg-emer[...]">
+                                                        <span className="inline-flex items-center gap-1 rounded bg-emerald-100/80 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
                                                             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></span>
                                                             Connected
                                                         </span>
@@ -821,4 +822,296 @@ export default function AccountsIndex({
                                                         )}
                                                     </div>
 
-(This file is very large — truncated in this view for brevity.)
+                                                    <div className="flex flex-col gap-1.5 text-left">
+                                                        <Label
+                                                            htmlFor="access_token"
+                                                            className="text-xs"
+                                                        >
+                                                            Access Token
+                                                        </Label>
+                                                        <Input
+                                                            id="access_token"
+                                                            type="password"
+                                                            value={
+                                                                linkForm.data
+                                                                    .access_token
+                                                            }
+                                                            onChange={(e) =>
+                                                                linkForm.setData(
+                                                                    'access_token',
+                                                                    e.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            placeholder="Leave empty to keep unchanged"
+                                                        />
+                                                        {linkForm.errors
+                                                            .access_token && (
+                                                            <span className="text-xs text-rose-500">
+                                                                {
+                                                                    linkForm
+                                                                        .errors
+                                                                        .access_token
+                                                                }
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div></div>
+                                                    <div className="flex flex-col gap-1.5 text-left">
+                                                        <Label
+                                                            htmlFor="app_secret"
+                                                            className="text-xs"
+                                                        >
+                                                            App Secret
+                                                        </Label>
+                                                        <Input
+                                                            id="app_secret"
+                                                            type="password"
+                                                            value={
+                                                                linkForm.data
+                                                                    .app_secret
+                                                            }
+                                                            onChange={(e) =>
+                                                                linkForm.setData(
+                                                                    'app_secret',
+                                                                    e.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            placeholder="Leave empty to keep unchanged"
+                                                        />
+                                                        {linkForm.errors
+                                                            .app_secret && (
+                                                            <span className="text-xs text-rose-500">
+                                                                {
+                                                                    linkForm
+                                                                        .errors
+                                                                        .app_secret
+                                                                }
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <DialogFooter className="mt-auto border-t pt-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setIsLinkOpen(false)
+                                                    }
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    type="submit"
+                                                    disabled={
+                                                        linkForm.processing
+                                                    }
+                                                    size="sm"
+                                                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                                >
+                                                    Link Account
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </div>
+                                )}
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                </div>
+
+                {/* Edit Account Dialog */}
+                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                    <DialogContent className="sm:max-w-[480px]">
+                        <DialogHeader>
+                            <DialogTitle>
+                                Edit WhatsApp Account Credentials
+                            </DialogTitle>
+                            <DialogDescription>
+                                Update credentials for display name "
+                                {editingAccount?.display_name}" (
+                                {editingAccount?.phone_number}).
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form
+                            onSubmit={handleEditSubmit}
+                            className="space-y-4 py-2"
+                        >
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1.5 text-left">
+                                    <Label
+                                        htmlFor="edit_phone_number_id"
+                                        className="text-xs"
+                                    >
+                                        Phone Number ID
+                                    </Label>
+                                    <Input
+                                        id="edit_phone_number_id"
+                                        value={editForm.data.phone_number_id}
+                                        onChange={(e) =>
+                                            editForm.setData(
+                                                'phone_number_id',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="XXXXXXXX"
+                                        required
+                                    />
+                                    {editForm.errors.phone_number_id && (
+                                        <span className="text-xs text-rose-500">
+                                            {editForm.errors.phone_number_id}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col gap-1.5 text-left">
+                                    <Label
+                                        htmlFor="edit_waba_id"
+                                        className="text-xs"
+                                    >
+                                        WhatsApp Business Account ID (WABA)
+                                    </Label>
+                                    <Input
+                                        id="edit_waba_id"
+                                        value={editForm.data.waba_id}
+                                        onChange={(e) =>
+                                            editForm.setData(
+                                                'waba_id',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="XXXXXXXX"
+                                        required
+                                    />
+                                    {editForm.errors.waba_id && (
+                                        <span className="text-xs text-rose-500">
+                                            {editForm.errors.waba_id}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1.5 text-left">
+                                    <Label
+                                        htmlFor="edit_app_id"
+                                        className="text-xs"
+                                    >
+                                        App ID
+                                    </Label>
+                                    <Input
+                                        id="edit_app_id"
+                                        value={editForm.data.app_id}
+                                        onChange={(e) =>
+                                            editForm.setData(
+                                                'app_id',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="XXXXXXXX"
+                                    />
+                                    {editForm.errors.app_id && (
+                                        <span className="text-xs text-rose-500">
+                                            {editForm.errors.app_id}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col gap-1.5 text-left">
+                                    <Label
+                                        htmlFor="edit_access_token"
+                                        className="text-xs"
+                                    >
+                                        Access Token
+                                    </Label>
+                                    <Input
+                                        id="edit_access_token"
+                                        type="password"
+                                        value={editForm.data.access_token}
+                                        onChange={(e) =>
+                                            editForm.setData(
+                                                'access_token',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="Leave blank to keep current"
+                                    />
+                                    {editForm.errors.access_token && (
+                                        <span className="text-xs text-rose-500">
+                                            {editForm.errors.access_token}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div></div>
+                                <div className="flex flex-col gap-1.5 text-left">
+                                    <Label
+                                        htmlFor="edit_app_secret"
+                                        className="text-xs"
+                                    >
+                                        App Secret
+                                    </Label>
+                                    <Input
+                                        id="edit_app_secret"
+                                        type="password"
+                                        value={editForm.data.app_secret}
+                                        onChange={(e) =>
+                                            editForm.setData(
+                                                'app_secret',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="Leave blank to keep current"
+                                    />
+                                    {editForm.errors.app_secret && (
+                                        <span className="text-xs text-rose-500">
+                                            {editForm.errors.app_secret}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <DialogFooter className="border-t pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsEditOpen(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={editForm.processing}
+                                    size="sm"
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                >
+                                    Update Credentials
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Table of active/pending numbers */}
+                <DataTable
+                    columns={columns}
+                    data={accounts}
+                    emptyMessage="No WhatsApp numbers linked yet. Click 'Link WhatsApp Number' to begin onboarding."
+                />
+            </div>
+        </>
+    );
+}
+
+AccountsIndex.layout = (page: any) => page;

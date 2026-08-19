@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\CampaignRecipient;
+use App\Models\WhatsappChat;
 use App\Models\WhatsappMessage;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -15,35 +17,60 @@ use Inertia\Response;
 class DashboardController extends Controller
 {
     /**
-     * Display the client dashboard.
+     * Display the client dashboard with live real-time metrics.
      */
     public function index(Request $request): Response
     {
         $tenant = $request->user()->tenant;
+        $account = $tenant->whatsappAccounts()->where('status', 'active')->first();
+
+        // 1. Sync live messaging limit tier from Meta (Cached for 1 hour)
+        if ($account && $account->phone_number_id) {
+            $this->syncMessagingLimitTier($account);
+        }
 
         $activeNumbers = $tenant->whatsappAccounts()->where('status', 'active')->count();
         $totalCampaigns = $tenant->campaigns()->count();
 
-        // Count ALL outbound messages across all sources (inbox, API, campaigns, automation)
-        $chatIds = $tenant->whatsappChats()->pluck('id');
+        $chatIds = $tenant->whatsappChats()->pluck('id')->all();
+        $campaignIds = $tenant->campaigns()->pluck('id')->all();
 
-        $totalMessagesSent = WhatsappMessage::whereIn('whatsapp_chat_id', $chatIds)
+        // 2. Outbound Broadcast Messages (Campaigns)
+        $campaignMarketingSent = empty($campaignIds) ? 0 : CampaignRecipient::whereIn('campaign_id', $campaignIds)
+            ->whereHas('campaign', fn($q) => $q->whereNull('message_type')->orWhere('message_type', 'template'))
+            ->whereIn('status', ['sent', 'delivered', 'read'])->count();
+
+        $campaignUtilitySent = empty($campaignIds) ? 0 : CampaignRecipient::whereIn('campaign_id', $campaignIds)
+            ->whereHas('campaign.messageTemplate', fn($q) => $q->where('category', 'UTILITY'))
+            ->whereIn('status', ['sent', 'delivered', 'read'])->count();
+
+        $campaignDelivered = empty($campaignIds) ? 0 : CampaignRecipient::whereIn('campaign_id', $campaignIds)
+            ->whereIn('status', ['delivered', 'read'])->count();
+
+        $campaignFailed = empty($campaignIds) ? 0 : CampaignRecipient::whereIn('campaign_id', $campaignIds)
+            ->where('status', 'failed')->count();
+
+        // 3. 1-on-1 Inbox Messages
+        $inboxOutboundSent = empty($chatIds) ? 0 : WhatsappMessage::whereIn('whatsapp_chat_id', $chatIds)
+            ->where('direction', 'outbound')->count();
+
+        $inboxDelivered = empty($chatIds) ? 0 : WhatsappMessage::whereIn('whatsapp_chat_id', $chatIds)
             ->where('direction', 'outbound')
-            ->count();
+            ->whereIn('status', ['delivered', 'read'])->count();
 
-        $totalDelivered = WhatsappMessage::whereIn('whatsapp_chat_id', $chatIds)
+        $inboxFailed = empty($chatIds) ? 0 : WhatsappMessage::whereIn('whatsapp_chat_id', $chatIds)
             ->where('direction', 'outbound')
-            ->whereIn('status', ['delivered', 'read'])
+            ->where('status', 'failed')->count();
+
+        // 4. Dynamic Unique Customers Who Replied (Distinct Chats with Inbound Messages)
+        $totalUniqueRepliedCustomers = $tenant->whatsappChats()
+            ->whereHas('messages', fn ($q) => $q->where('direction', 'inbound'))
             ->count();
 
-        $totalFailed = WhatsappMessage::whereIn('whatsapp_chat_id', $chatIds)
-            ->where('direction', 'outbound')
-            ->where('status', 'failed')
-            ->count();
-
-        $totalReceived = WhatsappMessage::whereIn('whatsapp_chat_id', $chatIds)
-            ->where('direction', 'inbound')
-            ->count();
+        // Summary Totals
+        $totalMessagesSent = $campaignMarketingSent + $campaignUtilitySent + $inboxOutboundSent;
+        $totalDelivered = $campaignDelivered + $inboxDelivered;
+        $totalFailed = $campaignFailed + $inboxFailed;
 
         $recentCampaigns = $tenant->campaigns()
             ->with('messageTemplate')
@@ -64,9 +91,9 @@ class DashboardController extends Controller
                 'created_at' => $campaign->created_at->diffForHumans(),
             ]);
 
-        $weeklyActivity = $this->weeklyActivity($chatIds->all());
-        $deliveryStatus = $this->deliveryStatus($tenant->campaigns()->pluck('id')->all());
-        $apiUsage = $this->getWhatsappApiUsage();
+        $weeklyActivity = $this->weeklyActivity($chatIds, $campaignIds);
+        $deliveryStatus = $this->deliveryStatus($campaignIds, $inboxDelivered, $inboxFailed);
+        $apiUsage = $this->calculateApiUsage($campaignMarketingSent, $campaignUtilitySent, $totalUniqueRepliedCustomers);
 
         return Inertia::render('client/dashboard', [
             'stats' => [
@@ -75,7 +102,7 @@ class DashboardController extends Controller
                 'totalMessagesSent' => $totalMessagesSent,
                 'totalDelivered' => $totalDelivered,
                 'totalFailed' => $totalFailed,
-                'totalReceived' => $totalReceived,
+                'totalReceived' => $totalUniqueRepliedCustomers,
             ],
             'recentCampaigns' => $recentCampaigns,
             'weeklyActivity' => $weeklyActivity,
@@ -85,45 +112,71 @@ class DashboardController extends Controller
     }
 
     /**
-     * Build a real 7-day outbound/delivered trend from whatsapp_messages.
-     *
-     * @param  array<int>  $chatIds
-     * @return array<int, array{day: string, date: string, sent: int, delivered: int}>
+     * Auto-sync messaging limit tier from Meta Graph API.
      */
-    private function weeklyActivity(array $chatIds): array
+    private function syncMessagingLimitTier($account): void
+    {
+        Cache::remember('meta_tier_sync_' . $account->id, 3600, function () use ($account) {
+            $token = $account->access_token ?? config('whatsapp.token');
+            if (! $token) return null;
+
+            try {
+                $res = Http::withToken($token)
+                    ->timeout(4)
+                    ->get("https://graph.facebook.com/v20.0/{$account->phone_number_id}?fields=messaging_limit_tier");
+
+                if ($res->successful()) {
+                    $tier = $res->json('messaging_limit_tier');
+                    $limitMap = [
+                        'TIER_250' => 250,
+                        'TIER_1K' => 1000,
+                        'TIER_2K' => 2000,
+                        'TIER_10K' => 10000,
+                        'TIER_100K' => 100000,
+                        'TIER_UNLIMITED' => 1000000,
+                    ];
+                    $account->update([
+                        'messaging_limit_tier' => $tier,
+                        'messaging_limit' => $limitMap[$tier] ?? 2000,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // Ignore temporary network timeouts
+            }
+            return true;
+        });
+    }
+
+    /**
+     * 7-day outbound & delivered message trends.
+     */
+    private function weeklyActivity(array $chatIds, array $campaignIds): array
     {
         $start = now()->subDays(6)->startOfDay();
         $end = now()->endOfDay();
 
-        $messages = empty($chatIds)
-            ? collect()
-            : WhatsappMessage::query()
-                ->whereIn('whatsapp_chat_id', $chatIds)
-                ->where('direction', 'outbound')
-                ->where(function ($query) use ($start, $end) {
-                    $query->whereBetween('sent_at', [$start, $end])
-                        ->orWhere(function ($query) use ($start, $end) {
-                            $query->whereNull('sent_at')
-                                ->whereBetween('created_at', [$start, $end]);
-                        });
-                })
-                ->get(['status', 'sent_at', 'created_at']);
+        $inboxMessages = empty($chatIds) ? collect() : WhatsappMessage::query()
+            ->whereIn('whatsapp_chat_id', $chatIds)
+            ->where('direction', 'outbound')
+            ->whereBetween('created_at', [$start, $end])
+            ->get(['status', 'created_at']);
 
-        $grouped = $messages->groupBy(function (WhatsappMessage $message): string {
-            return ($message->sent_at ?? $message->created_at)->toDateString();
-        });
+        $campaignMessages = empty($campaignIds) ? collect() : CampaignRecipient::query()
+            ->whereIn('campaign_id', $campaignIds)
+            ->whereBetween('created_at', [$start, $end])
+            ->get(['status', 'created_at']);
+
+        $allOutbound = $inboxMessages->concat($campaignMessages);
+        $grouped = $allOutbound->groupBy(fn ($msg) => $msg->created_at->toDateString());
 
         return collect(CarbonPeriod::create($start, '1 day', $end))
             ->map(function (Carbon $date) use ($grouped): array {
                 $dayMessages = $grouped->get($date->toDateString(), collect());
-
                 return [
                     'day' => $date->format('D'),
                     'date' => $date->toDateString(),
                     'sent' => $dayMessages->count(),
-                    'delivered' => $dayMessages
-                        ->whereIn('status', ['delivered', 'read'])
-                        ->count(),
+                    'delivered' => $dayMessages->whereIn('status', ['delivered', 'read'])->count(),
                 ];
             })
             ->values()
@@ -131,12 +184,9 @@ class DashboardController extends Controller
     }
 
     /**
-     * Build campaign recipient delivery breakdown from real recipient statuses.
-     *
-     * @param  array<int>  $campaignIds
-     * @return array{total: int, delivered: int, failed: int, pending: int, sent: int, deliveryRate: int, unresolvedRate: int}
+     * Delivery rate gauge.
      */
-    private function deliveryStatus(array $campaignIds): array
+    private function deliveryStatus(array $campaignIds, int $inboxDelivered, int $inboxFailed): array
     {
         $counts = empty($campaignIds)
             ? collect()
@@ -146,8 +196,8 @@ class DashboardController extends Controller
                 ->groupBy('status')
                 ->pluck('aggregate', 'status');
 
-        $delivered = (int) ($counts['delivered'] ?? 0) + (int) ($counts['read'] ?? 0);
-        $failed = (int) ($counts['failed'] ?? 0);
+        $delivered = (int) ($counts['delivered'] ?? 0) + (int) ($counts['read'] ?? 0) + $inboxDelivered;
+        $failed = (int) ($counts['failed'] ?? 0) + $inboxFailed;
         $sent = (int) ($counts['sent'] ?? 0);
         $pending = (int) ($counts['pending'] ?? 0);
         $total = $delivered + $failed + $sent + $pending;
@@ -158,118 +208,47 @@ class DashboardController extends Controller
             'failed' => $failed,
             'pending' => $pending,
             'sent' => $sent,
-            'deliveryRate' => $total > 0 ? (int) round(($delivered / $total) * 100) : 0,
+            'deliveryRate' => $total > 0 ? (int) round(($delivered / $total) * 100) : 100,
             'unresolvedRate' => $total > 0 ? (int) round((($failed + $pending + $sent) / $total) * 100) : 0,
         ];
     }
 
     /**
-     * Retrieve WhatsApp API usage and calculate US conversation pricing stats.
-     *
-     * @return array{
-     *     categories: array{
-     *         marketing: array{count: int, cost: string},
-     *         authentication: array{count: int, cost: string},
-     *         utility: array{count: int, cost: string},
-     *         service: array{count: int, cost: string}
-     *     },
-     *     total_sent: int,
-     *     total_cost: string
-     * }
+     * Accurate WhatsApp API Usage calculation.
      */
-    private function getWhatsappApiUsage(): array
+    private function calculateApiUsage(int $marketingSent, int $utilitySent, int $serviceReceived): array
     {
-        $zeroedData = [
+        $marketingCost = $marketingSent * 0.025;
+        $utilityCost = $utilitySent * 0.004;
+
+        // Meta free monthly tier applies to first 1,000 service conversations
+        $billableService = max(0, $serviceReceived - 1000);
+        $serviceCost = $billableService * 0.005;
+
+        $totalOutboundSent = $marketingSent + $utilitySent;
+        $totalCost = $marketingCost + $utilityCost + $serviceCost;
+
+        return [
             'categories' => [
-                'marketing' => ['count' => 0, 'cost' => '0.00'],
-                'authentication' => ['count' => 0, 'cost' => '0.00'],
-                'utility' => ['count' => 0, 'cost' => '0.00'],
-                'service' => ['count' => 0, 'cost' => '0.00'],
+                'marketing' => [
+                    'count' => $marketingSent,
+                    'cost' => number_format($marketingCost, 2, '.', ''),
+                ],
+                'authentication' => [
+                    'count' => 0,
+                    'cost' => '0.00',
+                ],
+                'utility' => [
+                    'count' => $utilitySent,
+                    'cost' => number_format($utilityCost, 2, '.', ''),
+                ],
+                'service' => [
+                    'count' => $serviceReceived,
+                    'cost' => '0.00',
+                ],
             ],
-            'total_sent' => 0,
-            'total_cost' => '0.00',
+            'total_sent' => $totalOutboundSent,
+            'total_cost' => number_format($totalCost, 2, '.', ''),
         ];
-
-        $wabaId = config('services.meta.waba_id');
-        $accessToken = config('services.meta.access_token');
-
-        if (empty($wabaId) || empty($accessToken)) {
-            return $zeroedData;
-        }
-
-        try {
-            $response = Http::withToken($accessToken)
-                ->timeout(5)
-                ->get("https://graph.facebook.com/v20.0/{$wabaId}", [
-                    'fields' => 'conversation_analytics.granularity(MONTHLY).dimensions(["conversation_category"])',
-                ]);
-
-            if ($response->failed()) {
-                return $zeroedData;
-            }
-
-            $data = $response->json();
-            $analytics = $data['conversation_analytics'] ?? [];
-
-            $counts = [
-                'marketing' => 0,
-                'authentication' => 0,
-                'utility' => 0,
-                'service' => 0,
-            ];
-
-            $dataPoints = [];
-
-            if (isset($analytics['data']) && is_array($analytics['data'])) {
-                foreach ($analytics['data'] as $item) {
-                    if (isset($item['data_points']) && is_array($item['data_points'])) {
-                        foreach ($item['data_points'] as $dp) {
-                            $dataPoints[] = $dp;
-                        }
-                    }
-                }
-            } elseif (isset($analytics['data_points']) && is_array($analytics['data_points'])) {
-                $dataPoints = $analytics['data_points'];
-            }
-
-            foreach ($dataPoints as $dp) {
-                $category = strtolower((string) ($dp['conversation_category'] ?? $dp['category'] ?? ''));
-                $count = (int) ($dp['conversation_count'] ?? $dp['count'] ?? $dp['volume'] ?? 0);
-
-                if (array_key_exists($category, $counts)) {
-                    $counts[$category] += $count;
-                }
-            }
-
-            $rates = [
-                'marketing' => 0.025,
-                'authentication' => 0.004,
-                'utility' => 0.004,
-                'service' => 0.00,
-            ];
-
-            $totalSent = 0;
-            $totalCost = 0.0;
-            $categories = [];
-
-            foreach ($counts as $cat => $count) {
-                $cost = $count * $rates[$cat];
-                $totalSent += $count;
-                $totalCost += $cost;
-
-                $categories[$cat] = [
-                    'count' => $count,
-                    'cost' => number_format($cost, 2, '.', ''),
-                ];
-            }
-
-            return [
-                'categories' => $categories,
-                'total_sent' => $totalSent,
-                'total_cost' => number_format($totalCost, 2, '.', ''),
-            ];
-        } catch (\Throwable $e) {
-            return $zeroedData;
-        }
     }
 }

@@ -113,17 +113,12 @@ class MessageTemplate extends Model
 
                 return $parameters;
             }
+
+            // Body exists but has 0 placeholders: return empty
+            return [];
         }
 
-        // Fallback to positional mapping if we can't parse or find placeholders
-        foreach ($values as $value) {
-            $parameters[] = [
-                'type' => 'text',
-                'text' => (string) $value,
-            ];
-        }
-
-        return $parameters;
+        return [];
     }
 
     /**

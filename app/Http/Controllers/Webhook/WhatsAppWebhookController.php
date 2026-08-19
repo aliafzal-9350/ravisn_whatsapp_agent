@@ -40,6 +40,7 @@ class WhatsAppWebhookController extends Controller
             return response()->json(['error' => 'Invalid signature'], 403);
         }
 
+        \Illuminate\Support\Facades\Log::info('WhatsApp Incoming Webhook:', $request->all());
         $handler->handle($request->all());
 
         return response()->json(['status' => 'ok']);

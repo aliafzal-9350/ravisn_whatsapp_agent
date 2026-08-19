@@ -130,6 +130,7 @@ class WebhookHandler
 
         $account = WhatsappAccount::where('phone_number_id', $phoneNumberId)->first();
         if (! $account) {
+            \Illuminate\Support\Facades\Log::warning('Webhook received for unknown phone_number_id', ['phone_number_id' => $phoneNumberId]);
             return;
         }
 
@@ -204,6 +205,15 @@ class WebhookHandler
             );
 
             $chat->update(['last_message_at' => now()]);
+
+            // Auto Opt-Out (STOP / UNSUBSCRIBE) to safeguard Quality Rating
+            $cleanBody = trim(strtolower($body));
+            if (in_array($cleanBody, ['stop', 'unsubscribe', 'cancel', 'optout', 'opt-out'])) {
+                \App\Models\Contact::where('tenant_id', $tenant->id)
+                    ->where('phone', $customerPhone)
+                    ->update(['is_opted_out' => true]);
+                \Illuminate\Support\Facades\Log::info('Contact opted out via WhatsApp keyword', ['phone' => $customerPhone]);
+            }
 
             // Process Automation Flows
             $this->processAutomationFlows($tenant, $customerPhone, $body, $account);
@@ -361,8 +371,8 @@ class WebhookHandler
             if ($campaign->failed_count > 0) {
                 SystemNotification::create([
                     'tenant_id' => $campaign->tenant_id,
-                    'title' => 'فشل جزئي أو كلي في إرسال الحملة',
-                    'message' => "اكتملت الحملة \"{$campaign->name}\" مع فشل إرسال {$campaign->failed_count} رسالة من أصل {$campaign->total_recipients}.",
+                    'title' => 'Campaign Partial or Total Delivery Failure',
+                    'message' => "Campaign \"{$campaign->name}\" with {$campaign->failed_count} messages out of {$campaign->total_recipients}.",
                     'type' => 'error',
                 ]);
             }
@@ -586,7 +596,7 @@ class WebhookHandler
                     'meta_message_id' => 'system_'.bin2hex(random_bytes(10)),
                     'direction' => 'outbound',
                     'message_type' => 'text',
-                    'body' => '[إجراء تلقائي] تم تحويل المحادثة لوكيل في: '.$agentName,
+                    'body' => '[System Action] Chat transferred to agent: '.$agentName,
                     'sent_at' => now(),
                     'status' => 'read',
                 ]);
@@ -715,6 +725,7 @@ class WebhookHandler
 
         $account = WhatsappAccount::where('phone_number_id', $phoneNumberId)->first();
         if (! $account) {
+            \Illuminate\Support\Facades\Log::warning('Webhook received for unknown phone_number_id', ['phone_number_id' => $phoneNumberId]);
             return;
         }
 
@@ -725,8 +736,8 @@ class WebhookHandler
 
         if (in_array($newRating, ['YELLOW', 'RED'])) {
             $type = $newRating === 'RED' ? 'error' : 'warning';
-            $arTitle = $newRating === 'RED' ? 'حرج: انخفاض جودة الرقم إلى الأحمر' : 'تنبيه: انخفاض جودة الرقم إلى الأصفر';
-            $arMessage = "انخفضت جودة الرقم الخاص بك ({$account->phone_number}) من {$oldRating} إلى {$newRating}. يرجى التحقق من شكاوى العملاء لتجنب حظر الرقم.";
+            $arTitle = $newRating === 'RED' ? 'Critical: Phone number quality dropped to RED' : 'Warning: Phone number quality dropped to YELLOW';
+            $arMessage = "Your phone number ({$account->phone_number}) from {$oldRating} to {$newRating}. Please review customer feedback to avoid phone number restrictions.";
 
             SystemNotification::create([
                 'tenant_id' => $account->tenant_id,
