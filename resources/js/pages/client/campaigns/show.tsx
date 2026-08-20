@@ -19,7 +19,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 interface CampaignDetail {
-    id: number;
+    id: string | number;
     name: string;
     status: string;
     message_type: string;
@@ -41,7 +41,7 @@ interface CampaignDetail {
 }
 
 interface RecipientRow {
-    id: number;
+    id: string | number;
     phone_number: string;
     status: string;
     error_message: string | null;

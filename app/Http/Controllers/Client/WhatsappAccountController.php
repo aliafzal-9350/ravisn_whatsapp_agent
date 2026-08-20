@@ -153,7 +153,7 @@ class WhatsappAccountController extends Controller
         $tenant = $request->user()->tenant;
 
         // Ensure the account belongs to the tenant
-        if ($account->tenant_id !== $tenant->id) {
+        if ((string) $account->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -402,7 +402,7 @@ class WhatsappAccountController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($account->tenant_id !== $tenant->id) {
+        if ((string) $account->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -463,7 +463,7 @@ class WhatsappAccountController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($account->tenant_id !== $tenant->id) {
+        if ((string) $account->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 

@@ -136,7 +136,7 @@ class MessageTemplateController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($template->tenant_id !== $tenant->id) {
+        if ((string) $template->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -164,7 +164,7 @@ class MessageTemplateController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($template->tenant_id !== $tenant->id) {
+        if ((string) $template->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 

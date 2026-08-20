@@ -13,9 +13,19 @@ class WhatsappChat extends Model
 {
     use HasFactory;
 
+    /**
+     * The data type of the primary key ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
+
     protected function casts(): array
     {
         return [
+            'id' => 'string',
+            'tenant_id' => 'string',
+            'whatsapp_account_id' => 'string',
             'last_message_at' => 'datetime',
             'is_ai_active' => 'boolean',
         ];

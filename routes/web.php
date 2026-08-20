@@ -106,7 +106,7 @@ Route::middleware(['auth', 'verified', 'client'])
 
             // Notifications
             Route::post('notifications/{notification}/read', function (SystemNotification $notification) {
-                if ($notification->tenant_id === auth()->user()->tenant_id) {
+                if ((string) $notification->tenant_id === (string) auth()->user()->tenant_id) {
                     $notification->update(['read_at' => now()]);
                 }
 

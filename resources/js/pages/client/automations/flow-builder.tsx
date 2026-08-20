@@ -56,7 +56,7 @@ import {
 } from '@/routes/client/automations';
 
 export interface Group {
-    id: number;
+    id: string | number;
     name: string;
 }
 
@@ -112,7 +112,7 @@ export interface SerializedGraph {
 }
 
 export interface AutomationFlow {
-    id: number;
+    id: string | number;
     name: string;
     trigger_type: string;
     trigger_keyword?: string;

@@ -17,6 +17,26 @@ class Contact extends Model
     use HasFactory;
 
     /**
+     * The data type of the primary key ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'id' => 'string',
+            'tenant_id' => 'string',
+        ];
+    }
+
+    /**
      * Get the tenant that owns the contact.
      */
     public function tenant(): BelongsTo

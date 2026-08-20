@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 interface CampaignLog {
-    id: number;
+    id: string | number;
     name: string;
     status: string;
     message_type: string;

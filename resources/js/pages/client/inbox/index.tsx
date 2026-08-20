@@ -24,13 +24,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface Account {
-    id: number;
+    id: string | number;
     phone_number: string;
     display_name: string | null;
 }
 
 interface Chat {
-    id: number;
+    id: string | number;
     customer_phone: string;
     customer_name: string | null;
     last_message_at: string | null;
@@ -40,7 +40,7 @@ interface Chat {
 }
 
 interface Message {
-    id: number;
+    id: string | number;
     direction: 'inbound' | 'outbound';
     message_type: string;
     body: string;
@@ -50,7 +50,7 @@ interface Message {
 }
 
 interface MessageTemplate {
-    id: number;
+    id: string | number;
     name: string;
     language: string;
     category: string;
@@ -60,7 +60,7 @@ interface MessageTemplate {
 interface InboxProps {
     accounts: Account[];
     chats: Chat[];
-    selectedAccountId: number;
+    selectedAccountId: string | number | null;
     templates: MessageTemplate[];
     activeStrategy?: 'lead_qualifier' | 'faq_responder' | 'pure_manual';
 }

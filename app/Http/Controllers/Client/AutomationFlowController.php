@@ -332,7 +332,7 @@ class AutomationFlowController extends Controller
 
     private function authorizeTenantFlow(Request $request, AutomationFlow $automation): void
     {
-        if ($automation->tenant_id !== $request->user()->tenant->id) {
+        if ((string) $automation->tenant_id !== (string) $request->user()->tenant->id) {
             abort(403);
         }
     }

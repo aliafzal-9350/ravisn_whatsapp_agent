@@ -32,7 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 
 interface WabaAccount {
-    id: number;
+    id: string | number;
     phone_number: string;
     display_name: string | null;
     waba_id: string;

@@ -87,7 +87,7 @@ class InboxController extends Controller
         return Inertia::render('client/inbox/index', [
             'accounts' => $accounts,
             'chats' => $chats,
-            'selectedAccountId' => (int) $selectedAccountId,
+            'selectedAccountId' => $selectedAccountId ? (string) $selectedAccountId : null,
             'templates' => $templates,
             'activeStrategy' => $tenant->ai_strategy ?? 'lead_qualifier',
         ]);
@@ -98,7 +98,7 @@ class InboxController extends Controller
      */
     public function messages(Request $request, WhatsappChat $chat): JsonResponse
     {
-        if ($chat->tenant_id !== $request->user()->tenant_id) {
+        if ((string) $chat->tenant_id !== (string) $request->user()->tenant_id) {
             return response()->json(['error' => 'Forbidden'], 403);
         }
 
@@ -117,13 +117,13 @@ class InboxController extends Controller
         $validated = $request->validate([
             'type' => ['nullable', 'string', 'in:text,template'],
             'body' => ['required_if:type,text', 'nullable', 'string'],
-            'template_id' => ['required_if:type,template', 'nullable', 'integer'],
+            'template_id' => ['required_if:type,template', 'nullable', 'string'],
             'variables' => ['nullable', 'array'],
         ]);
 
         $type = $validated['type'] ?? 'text';
 
-        if ($chat->tenant_id !== $request->user()->tenant_id) {
+        if ((string) $chat->tenant_id !== (string) $request->user()->tenant_id) {
             return response()->json(['error' => 'Forbidden'], 403);
         }
 
@@ -219,7 +219,7 @@ class InboxController extends Controller
      */
     public function toggleAi(Request $request, WhatsappChat $chat): JsonResponse
     {
-        if ($chat->tenant_id !== $request->user()->tenant_id) {
+        if ((string) $chat->tenant_id !== (string) $request->user()->tenant_id) {
             return response()->json(['error' => 'Forbidden'], 403);
         }
 

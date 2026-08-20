@@ -34,7 +34,7 @@ interface Stats {
 }
 
 interface RecentCampaign {
-    id: number;
+    id: string | number;
     name: string;
     status: string;
     message_label: string;

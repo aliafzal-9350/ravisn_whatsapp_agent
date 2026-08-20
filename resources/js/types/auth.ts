@@ -1,5 +1,5 @@
 export type User = {
-    id: number;
+    id: string | number;
     name: string;
     email: string;
     avatar?: string;
@@ -16,7 +16,7 @@ export type Auth = {
 
 /* @chisel-passkeys */
 export type Passkey = {
-    id: number;
+    id: string | number;
     name: string;
     authenticator: string | null;
     created_at_diff: string;

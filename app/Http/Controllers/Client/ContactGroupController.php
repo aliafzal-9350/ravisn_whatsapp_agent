@@ -19,7 +19,7 @@ class ContactGroupController extends Controller
     public function members(Request $request, ContactGroup $group): JsonResponse
     {
         $tenant = $request->user()->tenant;
-        if ($group->tenant_id !== $tenant->id) {
+        if ((string) $group->tenant_id !== (string) $tenant->id) {
             return response()->json(['error' => 'Forbidden'], 403);
         }
 
@@ -95,7 +95,7 @@ class ContactGroupController extends Controller
     public function update(Request $request, ContactGroup $contactGroup): RedirectResponse
     {
         $tenant = $request->user()->tenant;
-        if ($contactGroup->tenant_id !== $tenant->id) {
+        if ((string) $contactGroup->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -117,7 +117,7 @@ class ContactGroupController extends Controller
     public function destroy(Request $request, ContactGroup $contactGroup): RedirectResponse
     {
         $tenant = $request->user()->tenant;
-        if ($contactGroup->tenant_id !== $tenant->id) {
+        if ((string) $contactGroup->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -134,7 +134,7 @@ class ContactGroupController extends Controller
     public function addContacts(Request $request, ContactGroup $group): RedirectResponse
     {
         $tenant = $request->user()->tenant;
-        if ($group->tenant_id !== $tenant->id) {
+        if ((string) $group->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -162,7 +162,7 @@ class ContactGroupController extends Controller
     public function removeContact(Request $request, ContactGroup $group, Contact $contact): RedirectResponse
     {
         $tenant = $request->user()->tenant;
-        if ($group->tenant_id !== $tenant->id || $contact->tenant_id !== $tenant->id) {
+        if ((string) $group->tenant_id !== (string) $tenant->id || (string) $contact->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 

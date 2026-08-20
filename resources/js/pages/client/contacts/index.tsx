@@ -33,14 +33,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 interface Group {
-    id: number;
+    id: string | number;
     name: string;
     description: string | null;
     contacts_count: number;
 }
 
 interface Contact {
-    id: number;
+    id: string | number;
     name: string;
     phone: string;
     email: string | null;
@@ -50,7 +50,7 @@ interface Contact {
     var3: string | null;
     var4: string | null;
     var5: string | null;
-    groups: { id: number; name: string }[];
+    groups: { id: string | number; name: string }[];
     created_at: string;
 }
 
@@ -62,7 +62,7 @@ interface PaginatedContacts {
 }
 
 interface MiniContact {
-    id: number;
+    id: string | number;
     name: string;
     phone: string;
 }

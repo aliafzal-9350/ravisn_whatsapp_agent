@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 interface WhatsappAccount {
-    id: number;
+    id: string | number;
     phone_number: string;
     display_name: string | null;
     status: string;
@@ -166,7 +166,7 @@ export default function AccountsIndex({
         });
     };
 
-    const handleDelete = (id: number) => {
+    const handleDelete = (id: string | number) => {
         if (
             confirm(
                 'Are you sure you want to delete this WhatsApp number? This cannot be undone.',

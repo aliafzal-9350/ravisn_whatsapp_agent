@@ -30,7 +30,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 
 interface WabaAccount {
-    id: number;
+    id: string | number;
     phone_number: string;
     display_name: string | null;
 }
@@ -43,16 +43,16 @@ interface TemplateComponent {
 }
 
 interface MessageTemplate {
-    id: number;
+    id: string | number;
     name: string;
     language: string;
     category: string;
-    whatsapp_account_id: number;
+    whatsapp_account_id: string | number;
     components: TemplateComponent[];
 }
 
 interface Group {
-    id: number;
+    id: string | number;
     name: string;
     contacts_count: number;
 }

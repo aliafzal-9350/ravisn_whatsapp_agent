@@ -206,7 +206,7 @@ class CampaignController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($campaign->tenant_id !== $tenant->id) {
+        if ((string) $campaign->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -260,7 +260,7 @@ class CampaignController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($campaign->tenant_id !== $tenant->id) {
+        if ((string) $campaign->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -284,7 +284,7 @@ class CampaignController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($campaign->tenant_id !== $tenant->id) {
+        if ((string) $campaign->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 

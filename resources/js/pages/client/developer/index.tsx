@@ -34,14 +34,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface ApiKey {
-    id: number;
+    id: string | number;
     name: string;
     last_used_at: string | null;
     created_at: string;
 }
 
 interface WebhookConfig {
-    id: number;
+    id: string | number;
     url: string;
     secret_token: string;
     is_active: boolean;
@@ -120,7 +120,7 @@ export default function DeveloperIndex({
         });
     };
 
-    const handleDeleteWebhook = (id: number, url: string) => {
+    const handleDeleteWebhook = (id: string | number, url: string) => {
         if (confirm(`Are you sure you want to delete webhook to "${url}"?`)) {
             router.delete(`/dashboard/developer/webhooks/${id}`, {
                 onSuccess: () => {
@@ -130,7 +130,7 @@ export default function DeveloperIndex({
         }
     };
 
-    const handleToggleWebhook = (id: number) => {
+    const handleToggleWebhook = (id: string | number) => {
         router.put(
             `/dashboard/developer/webhooks/${id}/toggle`,
             {},

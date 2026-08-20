@@ -13,7 +13,7 @@ import {
 import { StatusBadge } from '@/components/ui/status-badge';
 
 interface MessageTemplate {
-    id: number;
+    id: string | number;
     name: string;
     language: string;
     category: string;

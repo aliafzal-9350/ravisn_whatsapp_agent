@@ -12,9 +12,18 @@ class WhatsappMessage extends Model
 {
     use HasFactory;
 
+    /**
+     * The data type of the primary key ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
+
     protected function casts(): array
     {
         return [
+            'id' => 'string',
+            'whatsapp_chat_id' => 'string',
             'sent_at' => 'datetime',
         ];
     }

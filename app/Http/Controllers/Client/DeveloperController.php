@@ -80,7 +80,7 @@ class DeveloperController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($key->tenant_id !== $tenant->id) {
+        if ((string) $key->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -120,7 +120,7 @@ class DeveloperController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($webhook->tenant_id !== $tenant->id) {
+        if ((string) $webhook->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -140,7 +140,7 @@ class DeveloperController extends Controller
     {
         $tenant = $request->user()->tenant;
 
-        if ($webhook->tenant_id !== $tenant->id) {
+        if ((string) $webhook->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 

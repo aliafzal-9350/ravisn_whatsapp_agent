@@ -144,7 +144,7 @@ class ContactController extends Controller
     public function update(Request $request, Contact $contact): RedirectResponse
     {
         $tenant = $request->user()->tenant;
-        if ($contact->tenant_id !== $tenant->id) {
+        if ((string) $contact->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 
@@ -197,7 +197,7 @@ class ContactController extends Controller
     public function destroy(Request $request, Contact $contact): RedirectResponse
     {
         $tenant = $request->user()->tenant;
-        if ($contact->tenant_id !== $tenant->id) {
+        if ((string) $contact->tenant_id !== (string) $tenant->id) {
             abort(403);
         }
 

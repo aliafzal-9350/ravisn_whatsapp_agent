@@ -21,6 +21,13 @@ class Campaign extends Model
     use HasFactory;
 
     /**
+     * The data type of the primary key ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -28,6 +35,10 @@ class Campaign extends Model
     protected function casts(): array
     {
         return [
+            'id' => 'string',
+            'tenant_id' => 'string',
+            'whatsapp_account_id' => 'string',
+            'message_template_id' => 'string',
             'total_cost' => 'decimal:4',
             'scheduled_at' => 'datetime',
             'started_at' => 'datetime',

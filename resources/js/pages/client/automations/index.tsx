@@ -58,7 +58,7 @@ return;
         );
     };
 
-    const handleToggleFlow = (id: number) => {
+    const handleToggleFlow = (id: string | number) => {
         router.put(
             toggleAutomation.url(id),
             {},
