@@ -23,7 +23,7 @@ class DeveloperController extends Controller
             ->latest()
             ->get()
             ->map(fn (ApiKey $key) => [
-                'id' => $key->id,
+                'id' => (string) $key->id,
                 'name' => $key->name,
                 'last_used_at' => $key->last_used_at?->format('Y-m-d H:i'),
                 'created_at' => $key->created_at->format('Y-m-d H:i'),
@@ -33,7 +33,7 @@ class DeveloperController extends Controller
             ->latest()
             ->get()
             ->map(fn (OutgoingWebhook $webhook) => [
-                'id' => $webhook->id,
+                'id' => (string) $webhook->id,
                 'url' => $webhook->url,
                 'secret_token' => $webhook->secret_token,
                 'is_active' => $webhook->is_active,

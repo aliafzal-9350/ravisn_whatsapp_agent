@@ -25,7 +25,7 @@ class MessageTemplateController extends Controller
             ->latest()
             ->paginate(15)
             ->through(fn (MessageTemplate $template): array => [
-                'id' => $template->id,
+                'id' => (string) $template->id,
                 'name' => $template->name,
                 'language' => $template->language,
                 'category' => $template->category,
@@ -48,10 +48,10 @@ class MessageTemplateController extends Controller
         $tenant = $request->user()->tenant;
 
         $accounts = $tenant->whatsappAccounts()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'ACTIVE'])
             ->get()
             ->map(fn ($account): array => [
-                'id' => $account->id,
+                'id' => (string) $account->id,
                 'phone_number' => $account->phone_number,
                 'display_name' => $account->display_name,
                 'waba_id' => $account->waba_id,
@@ -68,7 +68,7 @@ class MessageTemplateController extends Controller
     public function store(Request $request, WhatsAppCloudApi $whatsAppApi): RedirectResponse
     {
         $validated = $request->validate([
-            'whatsapp_account_id' => ['required', 'exists:whatsapp_accounts,id'],
+            'whatsapp_account_id' => ['required', 'string', 'exists:whatsapp_accounts,id'],
             'name' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9_]+$/'],
             'language' => ['required', 'string', 'max:10'],
             'category' => ['required', 'string', 'in:MARKETING,UTILITY,AUTHENTICATION'],
@@ -112,7 +112,7 @@ class MessageTemplateController extends Controller
             $metaTemplateId = $response->json('id');
 
             $tenant->messageTemplates()->create([
-                'whatsapp_account_id' => $account->id,
+                'whatsapp_account_id' => (string) $account->id,
                 'meta_template_id' => $metaTemplateId,
                 'name' => $validated['name'],
                 'language' => $validated['language'],
@@ -144,7 +144,7 @@ class MessageTemplateController extends Controller
 
         return Inertia::render('client/templates/show', [
             'template' => [
-                'id' => $template->id,
+                'id' => (string) $template->id,
                 'name' => $template->name,
                 'language' => $template->language,
                 'category' => $template->category,

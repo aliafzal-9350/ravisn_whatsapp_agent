@@ -112,7 +112,7 @@ export default function ContactsIndex({
     const [loadingMembers, setLoadingMembers] = React.useState(false);
     const [addContactSearch, setAddContactSearch] = React.useState('');
     const [selectedContactIds, setSelectedContactIds] = React.useState<
-        number[]
+        (string | number)[]
     >([]);
 
     // Contact Form
@@ -126,7 +126,7 @@ export default function ContactsIndex({
         var3: '',
         var4: '',
         var5: '',
-        group_ids: [] as number[],
+        group_ids: [] as (string | number)[],
     });
 
     // Group Form
@@ -138,7 +138,7 @@ export default function ContactsIndex({
     // Import Form
     const importForm = useForm({
         file: null as File | null,
-        group_ids: [] as number[],
+        group_ids: [] as (string | number)[],
     });
 
     // Filter Trigger
@@ -176,7 +176,7 @@ export default function ContactsIndex({
                 var3: editingContact.var3 || '',
                 var4: editingContact.var4 || '',
                 var5: editingContact.var5 || '',
-                group_ids: editingContact.groups.map((g) => g.id),
+                group_ids: editingContact.groups.map((g) => String(g.id)),
             });
         } else {
             contactForm.reset();
@@ -200,7 +200,7 @@ export default function ContactsIndex({
     React.useEffect(() => {
         if (managingGroup) {
             setTimeout(() => setLoadingMembers(true), 0);
-            fetch(`/dashboard/contact-groups/${managingGroup.id}/members`)
+            fetch(`/dashboard/contact-groups/${String(managingGroup.id)}/members`)
                 .then((res) => res.json())
                 .then((data) => {
                     setCurrentGroupMembers(data);
@@ -220,7 +220,7 @@ export default function ContactsIndex({
         e.preventDefault();
 
         if (editingContact) {
-            contactForm.put(`/dashboard/contacts/${editingContact.id}`, {
+            contactForm.put(`/dashboard/contacts/${String(editingContact.id)}`, {
                 onSuccess: () => {
                     toast.success('Contact updated successfully!');
                     setAddEditContactOpen(false);
@@ -241,7 +241,7 @@ export default function ContactsIndex({
         e.preventDefault();
 
         if (editingGroup) {
-            groupForm.put(`/dashboard/contact-groups/${editingGroup.id}`, {
+            groupForm.put(`/dashboard/contact-groups/${String(editingGroup.id)}`, {
                 onSuccess: () => {
                     toast.success('Group updated successfully!');
                     setAddEditGroupOpen(false);
@@ -264,7 +264,7 @@ export default function ContactsIndex({
                 `Are you sure you want to delete contact "${contact.name}"?`,
             )
         ) {
-            router.delete(`/dashboard/contacts/${contact.id}`, {
+            router.delete(`/dashboard/contacts/${String(contact.id)}`, {
                 onSuccess: () => {
                     toast.success('Contact deleted successfully');
                 },
@@ -278,7 +278,7 @@ export default function ContactsIndex({
                 `Are you sure you want to delete group "${group.name}"? Contacts inside this group will not be deleted.`,
             )
         ) {
-            router.delete(`/dashboard/contact-groups/${group.id}`, {
+            router.delete(`/dashboard/contact-groups/${String(group.id)}`, {
                 onSuccess: () => {
                     toast.success('Group deleted successfully');
 
@@ -308,15 +308,15 @@ export default function ContactsIndex({
         });
     };
 
-    const handleRemoveContactFromGroup = (contactId: number) => {
+    const handleRemoveContactFromGroup = (contactId: string | number) => {
         if (managingGroup) {
             router.delete(
-                `/dashboard/contact-groups/${managingGroup.id}/contacts/${contactId}`,
+                `/dashboard/contact-groups/${String(managingGroup.id)}/contacts/${String(contactId)}`,
                 {
                     onSuccess: () => {
                         toast.success('Contact removed from group');
                         setCurrentGroupMembers((prev) =>
-                            prev.filter((m) => m.id !== contactId),
+                            prev.filter((m) => String(m.id) !== String(contactId)),
                         );
                     },
                 },
@@ -335,7 +335,7 @@ export default function ContactsIndex({
 
         if (managingGroup) {
             router.post(
-                `/dashboard/contact-groups/${managingGroup.id}/contacts`,
+                `/dashboard/contact-groups/${String(managingGroup.id)}/contacts`,
                 {
                     contact_ids: selectedContactIds,
                 },
@@ -351,12 +351,13 @@ export default function ContactsIndex({
         }
     };
 
-    const toggleContactSelection = (contactId: number) => {
+    const toggleContactSelection = (contactId: string | number) => {
         setSelectedContactIds((prev) => {
-            const idx = prev.indexOf(contactId);
+            const strId = String(contactId);
+            const exists = prev.some((id) => String(id) === strId);
 
-            if (idx > -1) {
-                return prev.filter((id) => id !== contactId);
+            if (exists) {
+                return prev.filter((id) => String(id) !== strId);
             } else {
                 return [...prev, contactId];
             }
@@ -370,8 +371,11 @@ export default function ContactsIndex({
                 .includes(addContactSearch.toLowerCase()) ||
             contact.phone.includes(addContactSearch);
         const alreadyMember = currentGroupMembers.some(
-            (m) => m.id === contact.id,
+            (m) => String(m.id) === String(contact.id),
         );
+
+        return matchesSearch && !alreadyMember;
+    });
 
         return matchesSearch && !alreadyMember;
     });

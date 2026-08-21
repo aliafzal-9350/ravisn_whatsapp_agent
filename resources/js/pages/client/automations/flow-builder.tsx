@@ -86,7 +86,7 @@ export interface Action {
     response_field?: 'notes' | 'var1' | 'var2' | 'var3' | 'var4' | 'var5';
     condition?: string;
     delay_seconds?: number;
-    group_id?: number;
+    group_id?: string | number;
     conditions?: Array<{
         operator: 'contains' | 'equals' | 'starts_with' | 'ends_with';
         value: string;
@@ -435,7 +435,7 @@ function createAction(type: ActionType, groups: Group[]): Action {
     }
 
     if (type === 'add_to_group' || type === 'remove_from_group') {
-        return { type, group_id: groups[0]?.id };
+        return { type, group_id: groups[0]?.id ? String(groups[0]?.id) : undefined };
     }
 
     if (type === 'google_sheets') {
@@ -481,7 +481,7 @@ export function actionSummary(action: Action, groups: Group[]): string {
     }
 
     if (action.type === 'add_to_group' || action.type === 'remove_from_group') {
-        return `${action.type === 'add_to_group' ? 'Add to' : 'Remove from'}: ${groups.find((group) => group.id === Number(action.group_id))?.name ?? 'Select a group'}`;
+        return `${action.type === 'add_to_group' ? 'Add to' : 'Remove from'}: ${groups.find((group) => String(group.id) === String(action.group_id))?.name ?? 'Select a group'}`;
     }
 
     if (action.type === 'send_email') {
@@ -2444,15 +2444,15 @@ export function FlowBuilder({ groups, flow }: FlowBuilderProps) {
                         </Label>
                         <select
                             className="h-9 w-full rounded-md border bg-background px-3 text-xs"
-                            value={selectedAction.group_id ?? ''}
+                            value={selectedAction.group_id !== undefined ? String(selectedAction.group_id) : ''}
                             onChange={(event) =>
                                 handleUpdateAction(selectedActionIndex, {
-                                    group_id: Number(event.target.value),
+                                    group_id: event.target.value,
                                 })
                             }
                         >
                             {groups.map((group) => (
-                                <option key={group.id} value={group.id}>
+                                <option key={String(group.id)} value={String(group.id)}>
                                     {group.name}
                                 </option>
                             ))}

@@ -54,7 +54,7 @@ class AutomationFlowController extends Controller
             'actions.*.conditions.*.value' => ['required_with:actions.*.conditions', 'string', 'max:255'],
             'actions.*.conditions_relation' => ['nullable', 'in:AND,OR'],
             'actions.*.delay_seconds' => ['nullable', 'integer', 'min:1', 'max:86400'],
-            'actions.*.group_id' => ['required_if:actions.*.type,add_to_group,remove_from_group', 'nullable', 'exists:contact_groups,id'],
+            'actions.*.group_id' => ['required_if:actions.*.type,add_to_group,remove_from_group', 'nullable', 'string', 'exists:contact_groups,id'],
             'visual_graph' => ['nullable', 'array'],
         ];
     }
@@ -70,7 +70,7 @@ class AutomationFlowController extends Controller
             ->latest()
             ->get()
             ->map(fn (AutomationFlow $flow) => [
-                'id' => $flow->id,
+                'id' => (string) $flow->id,
                 'name' => $flow->name,
                 'trigger_type' => $flow->trigger_type,
                 'trigger_keyword' => $flow->trigger_keyword,
@@ -84,7 +84,7 @@ class AutomationFlowController extends Controller
         $groups = $tenant->contactGroups()
             ->get()
             ->map(fn ($group) => [
-                'id' => $group->id,
+                'id' => (string) $group->id,
                 'name' => $group->name,
             ]);
 
@@ -306,7 +306,7 @@ class AutomationFlowController extends Controller
             ->contactGroups()
             ->get()
             ->map(fn ($group) => [
-                'id' => $group->id,
+                'id' => (string) $group->id,
                 'name' => $group->name,
             ])
             ->all();
@@ -318,7 +318,7 @@ class AutomationFlowController extends Controller
     private function serializeFlow(AutomationFlow $flow): array
     {
         return [
-            'id' => $flow->id,
+            'id' => (string) $flow->id,
             'name' => $flow->name,
             'trigger_type' => $flow->trigger_type,
             'trigger_keyword' => $flow->trigger_keyword,

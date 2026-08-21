@@ -66,7 +66,7 @@ export default function DeveloperIndex({
     const [isAddWebhookOpen, setIsAddWebhookOpen] = React.useState(false);
     const [copiedToken, setCopiedToken] = React.useState(false);
     const [copiedWebhookSecretId, setCopiedWebhookSecretId] = React.useState<
-        number | null
+        string | number | null
     >(null);
     const [copiedDocCode, setCopiedDocCode] = React.useState<string | null>(
         null,
@@ -95,13 +95,13 @@ export default function DeveloperIndex({
         });
     };
 
-    const handleRevokeKey = (keyId: number, name: string) => {
+    const handleRevokeKey = (keyId: string | number, name: string) => {
         if (
             confirm(
                 `Are you sure you want to revoke API Key "${name}"? External integrations using this key will immediately fail.`,
             )
         ) {
-            router.delete(`/dashboard/developer/keys/${keyId}`, {
+            router.delete(`/dashboard/developer/keys/${String(keyId)}`, {
                 onSuccess: () => {
                     toast.success('API key revoked successfully.');
                 },
@@ -122,7 +122,7 @@ export default function DeveloperIndex({
 
     const handleDeleteWebhook = (id: string | number, url: string) => {
         if (confirm(`Are you sure you want to delete webhook to "${url}"?`)) {
-            router.delete(`/dashboard/developer/webhooks/${id}`, {
+            router.delete(`/dashboard/developer/webhooks/${String(id)}`, {
                 onSuccess: () => {
                     toast.success('Webhook deleted successfully.');
                 },
@@ -132,7 +132,7 @@ export default function DeveloperIndex({
 
     const handleToggleWebhook = (id: string | number) => {
         router.put(
-            `/dashboard/developer/webhooks/${id}/toggle`,
+            `/dashboard/developer/webhooks/${String(id)}/toggle`,
             {},
             {
                 onSuccess: () => {
@@ -142,7 +142,7 @@ export default function DeveloperIndex({
         );
     };
 
-    const copyToClipboard = (text: string, type: 'token' | number | string) => {
+    const copyToClipboard = (text: string, type: 'token' | string | number) => {
         navigator.clipboard.writeText(text);
 
         if (type === 'token') {

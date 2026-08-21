@@ -49,13 +49,13 @@ export default function TemplatesIndex({ templates }: TemplatesIndexProps) {
         );
     };
 
-    const handleDelete = (templateId: number, name: string) => {
+    const handleDelete = (templateId: string | number, name: string) => {
         if (
             confirm(
                 `Are you sure you want to delete template "${name}" from Meta and RAVISN?`,
             )
         ) {
-            router.delete(`/dashboard/templates/${templateId}`, {
+            router.delete(`/dashboard/templates/${String(templateId)}`, {
                 onSuccess: () => {
                     toast.success('Template deleted successfully');
                 },

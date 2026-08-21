@@ -27,7 +27,7 @@ class ContactGroupController extends Controller
             ->orderBy('name')
             ->get()
             ->map(fn ($c) => [
-                'id' => $c->id,
+                'id' => (string) $c->id,
                 'name' => $c->name,
                 'phone' => $c->phone,
             ]);
@@ -47,7 +47,7 @@ class ContactGroupController extends Controller
             ->latest()
             ->paginate(15)
             ->through(fn ($group) => [
-                'id' => $group->id,
+                'id' => (string) $group->id,
                 'name' => $group->name,
                 'description' => $group->description,
                 'contacts_count' => $group->contacts_count,
@@ -59,7 +59,7 @@ class ContactGroupController extends Controller
             ->orderBy('name')
             ->get()
             ->map(fn ($c) => [
-                'id' => $c->id,
+                'id' => (string) $c->id,
                 'name' => $c->name,
                 'phone' => $c->phone,
             ]);
@@ -140,12 +140,12 @@ class ContactGroupController extends Controller
 
         $validated = $request->validate([
             'contact_ids' => ['required', 'array'],
-            'contact_ids.*' => ['exists:contacts,id'],
+            'contact_ids.*' => ['string', 'exists:contacts,id'],
         ]);
 
         // Securely filter only tenant's contacts
         $contactIds = Contact::whereIn('id', $validated['contact_ids'])
-            ->where('tenant_id', $tenant->id)
+            ->where('tenant_id', (string) $tenant->id)
             ->pluck('id')
             ->toArray();
 
@@ -166,7 +166,7 @@ class ContactGroupController extends Controller
             abort(403);
         }
 
-        $group->contacts()->detach($contact->id);
+        $group->contacts()->detach((string) $contact->id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contact removed from group.')]);
 

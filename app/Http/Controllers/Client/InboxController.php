@@ -23,27 +23,27 @@ class InboxController extends Controller
         $tenant = $request->user()->tenant;
 
         $accounts = $tenant->whatsappAccounts()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'ACTIVE'])
             ->get()
             ->map(fn ($acc) => [
-                'id' => $acc->id,
+                'id' => (string) $acc->id,
                 'phone_number' => $acc->phone_number,
                 'display_name' => $acc->display_name,
             ]);
 
         $selectedAccountId = $request->query('whatsapp_account_id');
         if (! $selectedAccountId && $accounts->isNotEmpty()) {
-            $selectedAccountId = $accounts->first()['id'];
+            $selectedAccountId = (string) $accounts->first()['id'];
         }
 
         $chats = [];
         if ($selectedAccountId) {
-            $chats = WhatsappChat::where('tenant_id', $tenant->id)
-                ->where('whatsapp_account_id', $selectedAccountId)
+            $chats = WhatsappChat::where('tenant_id', (string) $tenant->id)
+                ->where('whatsapp_account_id', (string) $selectedAccountId)
                 ->orderBy('last_message_at', 'desc')
                 ->get()
                 ->map(function ($chat) use ($tenant) {
-                    $contact = Contact::where('tenant_id', $tenant->id)
+                    $contact = Contact::where('tenant_id', (string) $tenant->id)
                         ->where('phone', $chat->customer_phone)
                         ->first();
 
@@ -61,7 +61,7 @@ class InboxController extends Controller
                     }
 
                     return [
-                        'id' => $chat->id,
+                        'id' => (string) $chat->id,
                         'customer_phone' => $chat->customer_phone,
                         'customer_name' => $contact ? $contact->name : $chat->customer_name,
                         'last_message_at' => $chat->last_message_at?->toIso8601String(),
@@ -73,14 +73,15 @@ class InboxController extends Controller
         }
 
         $templates = $tenant->messageTemplates()
-            ->where('whatsapp_account_id', $selectedAccountId)
-            ->where('status', 'approved')
+            ->where('whatsapp_account_id', (string) $selectedAccountId)
+            ->whereIn('status', ['approved', 'APPROVED'])
             ->get()
             ->map(fn ($template) => [
-                'id' => $template->id,
+                'id' => (string) $template->id,
                 'name' => $template->name,
                 'language' => $template->language,
                 'category' => $template->category,
+                'status' => strtoupper($template->status),
                 'components' => $template->components,
             ]);
 
@@ -166,8 +167,8 @@ class InboxController extends Controller
                     'sent_at' => now(),
                 ]);
             } else {
-                $template = MessageTemplate::where('tenant_id', $request->user()->tenant_id)
-                    ->where('id', $validated['template_id'])
+                $template = MessageTemplate::where('tenant_id', (string) $request->user()->tenant_id)
+                    ->where('id', (string) $validated['template_id'])
                     ->firstOrFail();
 
                 $components = [];

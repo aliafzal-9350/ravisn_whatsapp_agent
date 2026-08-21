@@ -41,7 +41,7 @@ class ContactController extends Controller
             ->paginate(20)
             ->withQueryString()
             ->through(fn ($contact) => [
-                'id' => $contact->id,
+                'id' => (string) $contact->id,
                 'name' => $contact->name,
                 'phone' => $contact->phone,
                 'email' => $contact->email,
@@ -52,7 +52,7 @@ class ContactController extends Controller
                 'var4' => $contact->var4,
                 'var5' => $contact->var5,
                 'groups' => $contact->groups->map(fn ($g) => [
-                    'id' => $g->id,
+                    'id' => (string) $g->id,
                     'name' => $g->name,
                 ]),
                 'created_at' => $contact->created_at->format('Y-m-d H:i'),
@@ -62,7 +62,7 @@ class ContactController extends Controller
             ->withCount('contacts')
             ->get()
             ->map(fn ($g) => [
-                'id' => $g->id,
+                'id' => (string) $g->id,
                 'name' => $g->name,
                 'description' => $g->description,
                 'contacts_count' => $g->contacts_count,
@@ -72,7 +72,7 @@ class ContactController extends Controller
             ->orderBy('name')
             ->get()
             ->map(fn ($c) => [
-                'id' => $c->id,
+                'id' => (string) $c->id,
                 'name' => $c->name,
                 'phone' => $c->phone,
             ]);
@@ -104,7 +104,7 @@ class ContactController extends Controller
             'var4' => ['nullable', 'string', 'max:255'],
             'var5' => ['nullable', 'string', 'max:255'],
             'group_ids' => ['nullable', 'array'],
-            'group_ids.*' => ['exists:contact_groups,id'],
+            'group_ids.*' => ['string', 'exists:contact_groups,id'],
         ]);
 
         $tenant = $request->user()->tenant;
@@ -159,7 +159,7 @@ class ContactController extends Controller
             'var4' => ['nullable', 'string', 'max:255'],
             'var5' => ['nullable', 'string', 'max:255'],
             'group_ids' => ['nullable', 'array'],
-            'group_ids.*' => ['exists:contact_groups,id'],
+            'group_ids.*' => ['string', 'exists:contact_groups,id'],
         ]);
 
         // Clean phone number
@@ -216,7 +216,7 @@ class ContactController extends Controller
         $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'], // Max 5MB
             'group_ids' => ['nullable', 'array'],
-            'group_ids.*' => ['exists:contact_groups,id'],
+            'group_ids.*' => ['string', 'exists:contact_groups,id'],
         ]);
 
         $tenant = $request->user()->tenant;

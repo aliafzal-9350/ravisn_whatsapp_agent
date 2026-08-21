@@ -29,7 +29,7 @@ class CampaignController extends Controller
             ->latest()
             ->paginate(15)
             ->through(fn (Campaign $campaign): array => [
-                'id' => $campaign->id,
+                'id' => (string) $campaign->id,
                 'name' => $campaign->name,
                 'status' => $campaign->status,
                 'message_type' => $campaign->message_type,
@@ -61,23 +61,24 @@ class CampaignController extends Controller
         $tenant = $request->user()->tenant;
 
         $accounts = $tenant->whatsappAccounts()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'ACTIVE'])
             ->get()
             ->map(fn ($account): array => [
-                'id' => $account->id,
+                'id' => (string) $account->id,
                 'phone_number' => $account->phone_number,
                 'display_name' => $account->display_name,
             ]);
 
         $templates = $tenant->messageTemplates()
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'APPROVED'])
             ->get()
             ->map(fn ($template): array => [
-                'id' => $template->id,
+                'id' => (string) $template->id,
                 'name' => $template->name,
                 'language' => $template->language,
                 'category' => $template->category,
-                'whatsapp_account_id' => $template->whatsapp_account_id,
+                'status' => strtoupper($template->status),
+                'whatsapp_account_id' => (string) $template->whatsapp_account_id,
                 'components' => $template->components,
             ]);
 
@@ -85,7 +86,7 @@ class CampaignController extends Controller
             ->withCount('contacts')
             ->get()
             ->map(fn ($group): array => [
-                'id' => $group->id,
+                'id' => (string) $group->id,
                 'name' => $group->name,
                 'contacts_count' => $group->contacts_count,
             ]);
@@ -106,11 +107,12 @@ class CampaignController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'whatsapp_account_id' => ['required', 'exists:whatsapp_accounts,id'],
+            'whatsapp_account_id' => ['required', 'string', 'exists:whatsapp_accounts,id'],
             'message_type' => ['required', Rule::in(['template', 'direct'])],
             'message_template_id' => [
                 Rule::requiredIf(fn (): bool => $request->input('message_type', 'template') === 'template'),
                 'nullable',
+                'string',
                 'exists:message_templates,id',
             ],
             'direct_message_body' => [
@@ -121,7 +123,7 @@ class CampaignController extends Controller
             ],
             'scheduled_at' => ['nullable', 'date'],
             'scheduled_timezone' => ['required_with:scheduled_at', 'nullable', 'timezone'],
-            'contact_group_id' => ['nullable', 'exists:contact_groups,id'],
+            'contact_group_id' => ['nullable', 'string', 'exists:contact_groups,id'],
             'recipients' => ['required_without:contact_group_id', 'array'],
             'recipients.*.phone_number' => ['required_with:recipients', 'string'],
             'recipients.*.variables' => ['nullable', 'array'],
@@ -143,8 +145,8 @@ class CampaignController extends Controller
 
         if ($messageType === 'template') {
             $template = $tenant->messageTemplates()
-                ->where('whatsapp_account_id', $account->id)
-                ->where('status', 'approved')
+                ->where('whatsapp_account_id', (string) $account->id)
+                ->whereIn('status', ['approved', 'APPROVED'])
                 ->findOrFail($validated['message_template_id']);
         }
 
@@ -216,7 +218,7 @@ class CampaignController extends Controller
             ->latest()
             ->paginate(50)
             ->through(fn (CampaignRecipient $recipient): array => [
-                'id' => $recipient->id,
+                'id' => (string) $recipient->id,
                 'phone_number' => $recipient->phone_number,
                 'status' => $recipient->status,
                 'error_message' => $recipient->error_message,
@@ -227,7 +229,7 @@ class CampaignController extends Controller
 
         return Inertia::render('client/campaigns/show', [
             'campaign' => [
-                'id' => $campaign->id,
+                'id' => (string) $campaign->id,
                 'name' => $campaign->name,
                 'status' => $campaign->status,
                 'message_type' => $campaign->message_type,

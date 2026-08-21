@@ -78,7 +78,7 @@ class DashboardController extends Controller
             ->limit(5)
             ->get()
             ->map(fn ($campaign): array => [
-                'id' => $campaign->id,
+                'id' => (string) $campaign->id,
                 'name' => $campaign->name,
                 'status' => $campaign->status,
                 'message_label' => $campaign->message_type === 'direct'

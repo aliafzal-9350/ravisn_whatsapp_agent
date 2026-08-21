@@ -47,6 +47,7 @@ interface MessageTemplate {
     name: string;
     language: string;
     category: string;
+    status?: string;
     whatsapp_account_id: string | number;
     components: TemplateComponent[];
 }
@@ -116,7 +117,9 @@ export default function CampaignCreate({
         }
 
         return templates.filter(
-            (t) => String(t.whatsapp_account_id) === selectedAccId,
+            (t) =>
+                String(t.whatsapp_account_id) === String(selectedAccId) &&
+                (!t.status || String(t.status).toUpperCase() === 'APPROVED'),
         );
     }, [templates, selectedAccId]);
 

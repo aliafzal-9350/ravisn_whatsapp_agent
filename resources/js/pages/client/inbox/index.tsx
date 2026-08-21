@@ -212,7 +212,7 @@ export default function InboxIndex({
 
     const [mode, setMode] = React.useState<'text' | 'template'>('text');
     const [selectedTemplateId, setSelectedTemplateId] = React.useState<
-        number | ''
+        string | number | ''
     >('');
     const [templateVars, setTemplateVars] = React.useState<string[]>([]);
 
@@ -231,19 +231,19 @@ export default function InboxIndex({
         setLoadingMessages(true);
     };
 
-    const handleAccountChange = (accountId: number) => {
+    const handleAccountChange = (accountId: string | number) => {
         setSelectedChat(null);
         setMessages([]);
-        router.visit(`/dashboard/inbox?whatsapp_account_id=${accountId}`, {
+        router.visit(`/dashboard/inbox?whatsapp_account_id=${String(accountId)}`, {
             preserveState: true,
             replace: true,
         });
     };
 
-    const fetchMessages = React.useCallback(async (chatId: number) => {
+    const fetchMessages = React.useCallback(async (chatId: string | number) => {
         try {
             const res = await fetch(
-                `/dashboard/inbox/chats/${chatId}/messages`,
+                `/dashboard/inbox/chats/${String(chatId)}/messages`,
             );
 
             if (res.ok) {
@@ -279,7 +279,7 @@ return;
 
         try {
             const res = await fetch(
-                `/dashboard/inbox/chats/${selectedChat.id}/toggle-ai`,
+                `/dashboard/inbox/chats/${String(selectedChat.id)}/toggle-ai`,
                 {
                     method: 'POST',
                     headers: {
@@ -332,12 +332,12 @@ return;
                     ? { type: 'text', body: newMessage }
                     : {
                           type: 'template',
-                          template_id: selectedTemplateId,
+                          template_id: String(selectedTemplateId),
                           variables: templateVars,
                       };
 
             const res = await fetch(
-                `/dashboard/inbox/chats/${selectedChat.id}/send`,
+                `/dashboard/inbox/chats/${String(selectedChat.id)}/send`,
                 {
                     method: 'POST',
                     headers: {
@@ -838,12 +838,10 @@ return;
                                                 Select Template:
                                             </span>
                                             <select
-                                                value={selectedTemplateId}
+                                                value={selectedTemplateId ? String(selectedTemplateId) : ''}
                                                 onChange={(e) => {
                                                     setSelectedTemplateId(
-                                                        Number(
-                                                            e.target.value,
-                                                        ) || '',
+                                                        e.target.value || '',
                                                     );
                                                     setTemplateVars([]);
                                                 }}
@@ -855,8 +853,8 @@ return;
                                                 </option>
                                                 {templates.map((t) => (
                                                     <option
-                                                        key={t.id}
-                                                        value={t.id}
+                                                        key={String(t.id)}
+                                                        value={String(t.id)}
                                                     >
                                                         {t.name} ({t.language})
                                                     </option>
@@ -873,8 +871,8 @@ return;
                                                 <Send className="h-3.5 w-3.5" />
                                                 <span className="text-xs">
                                                     {sending
-                                                        ? 'Sending...'
-                                                        : 'Send Template'}
+                                                         ? 'Sending...'
+                                                         : 'Send Template'}
                                                 </span>
                                             </Button>
                                         </div>
@@ -888,9 +886,9 @@ return;
                                                     const selectedTemplate =
                                                         templates.find(
                                                             (t) =>
-                                                                t.id ===
-                                                                selectedTemplateId,
-                                                        );
+                                                                String(t.id) ===
+                                                                String(selectedTemplateId),
+                                                        );       );
                                                     const vars =
                                                         getTemplateVariables(
                                                             selectedTemplate,

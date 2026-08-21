@@ -16,6 +16,13 @@ class SystemNotification extends Model
      */
     protected $keyType = 'string';
 
+    /**
+     * Indicates if the model's ID is auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
     protected function casts(): array
     {
         return [

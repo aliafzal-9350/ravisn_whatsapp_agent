@@ -114,8 +114,9 @@ class MessageApiController extends Controller
 
         // Find template by name and WhatsApp account
         $template = $tenant->messageTemplates()
-            ->where('whatsapp_account_id', $account->id)
+            ->where('whatsapp_account_id', (string) $account->id)
             ->where('name', $validated['template_name'])
+            ->whereIn('status', ['approved', 'APPROVED'])
             ->first();
 
         if (! $template) {

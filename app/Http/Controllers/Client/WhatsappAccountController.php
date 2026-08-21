@@ -25,7 +25,7 @@ class WhatsappAccountController extends Controller
             ->latest()
             ->get()
             ->map(fn (WhatsappAccount $account): array => [
-                'id' => $account->id,
+                'id' => (string) $account->id,
                 'phone_number' => $account->phone_number,
                 'display_name' => $account->display_name,
                 'status' => $account->status,

@@ -156,7 +156,7 @@ export default function AccountsIndex({
             return;
         }
 
-        editForm.put(`/dashboard/whatsapp-accounts/${editingAccount.id}`, {
+        editForm.put(`/dashboard/whatsapp-accounts/${String(editingAccount.id)}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setEditingAccount(null);
@@ -172,7 +172,7 @@ export default function AccountsIndex({
                 'Are you sure you want to delete this WhatsApp number? This cannot be undone.',
             )
         ) {
-            router.delete(`/dashboard/whatsapp-accounts/${id}`, {
+            router.delete(`/dashboard/whatsapp-accounts/${String(id)}`, {
                 onSuccess: () => {
                     toast.success('WhatsApp number deleted successfully.');
                 },
