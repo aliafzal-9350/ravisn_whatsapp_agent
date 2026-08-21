@@ -888,7 +888,7 @@ return;
                                                             (t) =>
                                                                 String(t.id) ===
                                                                 String(selectedTemplateId),
-                                                        );       );
+                                                        );
                                                     const vars =
                                                         getTemplateVariables(
                                                             selectedTemplate,

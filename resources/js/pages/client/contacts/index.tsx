@@ -377,9 +377,6 @@ export default function ContactsIndex({
         return matchesSearch && !alreadyMember;
     });
 
-        return matchesSearch && !alreadyMember;
-    });
-
     const activeGroupDetails = React.useMemo(() => {
         if (selectedGroupId === 'all') {
             return null;
