@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'tenant_id', 'whatsapp_account_id', 'message_template_id', 'name',
-    'message_type', 'direct_message_body', 'status', 'total_recipients',
+    'message_type', 'direct_message_body', 'header_media_url', 'parameters', 'status', 'total_recipients',
     'sent_count', 'delivered_count', 'failed_count', 'read_count',
     'total_cost', 'scheduled_at', 'scheduled_timezone', 'started_at', 'completed_at',
 ])]
@@ -46,6 +46,7 @@ class Campaign extends Model
             'tenant_id' => 'string',
             'whatsapp_account_id' => 'string',
             'message_template_id' => 'string',
+            'parameters' => 'array',
             'total_cost' => 'decimal:4',
             'scheduled_at' => 'datetime',
             'started_at' => 'datetime',

@@ -5,6 +5,10 @@ import {
     Calendar,
     MessageSquare,
     FileText,
+    Image as ImageIcon,
+    UploadCloud,
+    Link as LinkIcon,
+    X,
 } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
@@ -90,6 +94,13 @@ export default function CampaignCreate({
     );
     const [recipients, setRecipients] = React.useState<ParsedRecipient[]>([]);
     const [parsing, setParsing] = React.useState(false);
+    const [imagePreviewUrl, setImagePreviewUrl] = React.useState<string | null>(
+        null,
+    );
+    const [imageInputMode, setImageInputMode] = React.useState<'upload' | 'url'>(
+        'upload',
+    );
+
     const browserTimezone = React.useMemo(() => {
         return (
             Intl.DateTimeFormat().resolvedOptions().timeZone || defaultTimezone
@@ -102,6 +113,8 @@ export default function CampaignCreate({
         message_type: 'template',
         message_template_id: '',
         direct_message_body: '',
+        header_image: null as File | null,
+        header_media_url: '',
         scheduled_at: '',
         scheduled_timezone: timezones.includes(browserTimezone)
             ? browserTimezone
@@ -130,6 +143,9 @@ export default function CampaignCreate({
 
     React.useEffect(() => {
         setData('message_template_id', selectedTempId);
+        setData('header_image', null);
+        setData('header_media_url', '');
+        setImagePreviewUrl(null);
     }, [selectedTempId, setData]);
 
     React.useEffect(() => {
@@ -138,6 +154,9 @@ export default function CampaignCreate({
         if (messageType === 'direct') {
             setTimeout(() => setSelectedTempId(''), 0);
             setData('message_template_id', '');
+            setData('header_image', null);
+            setData('header_media_url', '');
+            setImagePreviewUrl(null);
         } else {
             setData('direct_message_body', '');
         }
@@ -170,6 +189,38 @@ export default function CampaignCreate({
     const activeTemplate = React.useMemo(() => {
         return templates.find((t) => String(t.id) === selectedTempId);
     }, [templates, selectedTempId]);
+
+    // Detect if the active template has an IMAGE header
+    const hasImageHeader = React.useMemo(() => {
+        if (messageType !== 'template' || !activeTemplate) {
+            return false;
+        }
+
+        return activeTemplate.components.some(
+            (c) =>
+                c.type.toUpperCase() === 'HEADER' &&
+                (c.format?.toUpperCase() === 'IMAGE' ||
+                    c.format?.toUpperCase() === 'MEDIA'),
+        );
+    }, [activeTemplate, messageType]);
+
+    // Handle header image file upload
+    const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        setData('header_image', file);
+        if (file) {
+            const preview = URL.createObjectURL(file);
+            setImagePreviewUrl(preview);
+        } else {
+            setImagePreviewUrl(data.header_media_url || null);
+        }
+    };
+
+    const handleRemoveImage = () => {
+        setData('header_image', null);
+        setData('header_media_url', '');
+        setImagePreviewUrl(null);
+    };
 
     // Handle recipient CSV file upload
     const handleFileSelect = async (file: File | null) => {
@@ -238,6 +289,19 @@ export default function CampaignCreate({
             return;
         }
 
+        if (
+            messageType === 'template' &&
+            hasImageHeader &&
+            !data.header_image &&
+            !data.header_media_url?.trim()
+        ) {
+            toast.error(
+                'This template requires a header image. Please upload an image or provide a URL.',
+            );
+
+            return;
+        }
+
         if (messageType === 'direct' && !data.direct_message_body.trim()) {
             toast.error('Please write the direct message body.');
 
@@ -245,6 +309,7 @@ export default function CampaignCreate({
         }
 
         post('/dashboard/campaigns', {
+            forceFormData: true,
             onSuccess: () => {
                 toast.success('Campaign launched / scheduled successfully!');
             },
@@ -272,22 +337,28 @@ export default function CampaignCreate({
         }
 
         const headerComponent = activeTemplate.components.find(
-            (c) => c.type === 'HEADER',
+            (c) => c.type.toUpperCase() === 'HEADER',
         );
         const bodyComponent = activeTemplate.components.find(
-            (c) => c.type === 'BODY',
+            (c) => c.type.toUpperCase() === 'BODY',
         );
         const footerComponent = activeTemplate.components.find(
-            (c) => c.type === 'FOOTER',
+            (c) => c.type.toUpperCase() === 'FOOTER',
         );
         const buttonsComponent = activeTemplate.components.find(
-            (c) => c.type === 'BUTTONS',
+            (c) => c.type.toUpperCase() === 'BUTTONS',
         );
 
+        let headerType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'NONE' = 'NONE';
+        if (headerComponent) {
+            const fmt = (headerComponent.format || 'TEXT').toUpperCase();
+            if (['TEXT', 'IMAGE', 'VIDEO', 'DOCUMENT'].includes(fmt)) {
+                headerType = fmt as any;
+            }
+        }
+
         return {
-            headerType: (headerComponent?.format === 'TEXT'
-                ? 'TEXT'
-                : 'NONE') as 'TEXT' | 'NONE',
+            headerType,
             headerText: headerComponent?.text || '',
             bodyText: bodyComponent?.text || '',
             footerText: footerComponent?.text || '',
@@ -539,6 +610,175 @@ export default function CampaignCreate({
                                             {errors.direct_message_body && (
                                                 <span className="text-xs text-rose-500">
                                                     {errors.direct_message_body}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Template Header Image Section */}
+                                    {messageType === 'template' && hasImageHeader && (
+                                        <div className="col-span-full rounded-xl border border-dashed border-emerald-300/80 bg-emerald-50/40 p-4 dark:border-emerald-800/60 dark:bg-emerald-950/10">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="rounded-lg bg-emerald-500/10 p-1.5 text-emerald-600 dark:text-emerald-400">
+                                                        <ImageIcon className="h-4 w-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-bold text-foreground">
+                                                            Campaign Header Image{' '}
+                                                            <span className="text-rose-500">
+                                                                *
+                                                            </span>
+                                                        </h4>
+                                                        <p className="text-[11px] text-muted-foreground">
+                                                            This template requires a header image. Upload a file or provide an image URL.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex rounded-lg border bg-background p-0.5 text-xs">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setImageInputMode(
+                                                                'upload',
+                                                            )
+                                                        }
+                                                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+                                                            imageInputMode ===
+                                                            'upload'
+                                                                ? 'bg-primary text-primary-foreground shadow-xs'
+                                                                : 'text-muted-foreground hover:text-foreground'
+                                                        }`}
+                                                    >
+                                                        File Upload
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setImageInputMode(
+                                                                'url',
+                                                            )
+                                                        }
+                                                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+                                                            imageInputMode ===
+                                                            'url'
+                                                                ? 'bg-primary text-primary-foreground shadow-xs'
+                                                                : 'text-muted-foreground hover:text-foreground'
+                                                        }`}
+                                                    >
+                                                        Image URL
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {imageInputMode === 'upload' ? (
+                                                <div className="space-y-2">
+                                                    {imagePreviewUrl &&
+                                                    data.header_image ? (
+                                                        <div className="flex items-center justify-between rounded-lg border bg-background p-2.5">
+                                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                                <img
+                                                                    src={
+                                                                        imagePreviewUrl
+                                                                    }
+                                                                    alt="Header preview"
+                                                                    className="h-12 w-12 rounded-md border object-cover"
+                                                                />
+                                                                <div className="truncate">
+                                                                    <p className="truncate text-xs font-semibold">
+                                                                        {
+                                                                            data
+                                                                                .header_image
+                                                                                .name
+                                                                        }
+                                                                    </p>
+                                                                    <p className="text-[10px] text-muted-foreground">
+                                                                        {(
+                                                                            data
+                                                                                .header_image
+                                                                                .size /
+                                                                            (1024 *
+                                                                                1024)
+                                                                        ).toFixed(
+                                                                            2,
+                                                                        )}{' '}
+                                                                        MB
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={
+                                                                    handleRemoveImage
+                                                                }
+                                                                className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <label className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/80 bg-background/50 p-4 text-center transition-colors hover:bg-background">
+                                                            <UploadCloud className="h-6 w-6 text-muted-foreground" />
+                                                            <span className="text-xs font-semibold text-foreground">
+                                                                Click to upload header image
+                                                            </span>
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                JPG, PNG, WebP up to 5MB
+                                                            </span>
+                                                            <input
+                                                                type="file"
+                                                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                                                className="hidden"
+                                                                onChange={
+                                                                    handleImageFileSelect
+                                                                }
+                                                            />
+                                                        </label>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <div className="relative">
+                                                        <LinkIcon className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                                                        <Input
+                                                            type="url"
+                                                            placeholder="https://example.com/images/banner.jpg"
+                                                            value={
+                                                                data.header_media_url
+                                                            }
+                                                            onChange={(e) => {
+                                                                const val =
+                                                                    e.target
+                                                                        .value;
+                                                                setData(
+                                                                    'header_media_url',
+                                                                    val,
+                                                                );
+                                                                setData(
+                                                                    'header_image',
+                                                                    null,
+                                                                );
+                                                                setImagePreviewUrl(
+                                                                    val || null,
+                                                                );
+                                                            }}
+                                                            className="pl-9 text-xs"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {errors.header_image && (
+                                                <span className="mt-1 block text-xs text-rose-500">
+                                                    {errors.header_image}
+                                                </span>
+                                            )}
+                                            {errors.header_media_url && (
+                                                <span className="mt-1 block text-xs text-rose-500">
+                                                    {errors.header_media_url}
                                                 </span>
                                             )}
                                         </div>
@@ -795,6 +1035,16 @@ export default function CampaignCreate({
                                         language={activeTemplate?.language}
                                         headerType={templateSpecs.headerType}
                                         headerText={templateSpecs.headerText}
+                                        headerMediaUrl={
+                                            imagePreviewUrl ||
+                                            data.header_media_url ||
+                                            null
+                                        }
+                                        headerMediaType={
+                                            templateSpecs.headerType === 'IMAGE'
+                                                ? 'IMAGE'
+                                                : undefined
+                                        }
                                         bodyText={templateSpecs.bodyText}
                                         footerText={templateSpecs.footerText}
                                         buttons={templateSpecs.buttons}

@@ -121,6 +121,8 @@ class CampaignController extends Controller
                 'string',
                 'max:4096',
             ],
+            'header_image' => ['nullable', 'image', 'max:5120'],
+            'header_media_url' => ['nullable', 'url', 'max:2048'],
             'scheduled_at' => ['nullable', 'date'],
             'scheduled_timezone' => ['required_with:scheduled_at', 'nullable', 'timezone'],
             'contact_group_id' => ['nullable', 'string', 'exists:contact_groups,id'],
@@ -148,6 +150,28 @@ class CampaignController extends Controller
                 ->where('whatsapp_account_id', (string) $account->id)
                 ->whereIn('status', ['approved', 'APPROVED'])
                 ->findOrFail($validated['message_template_id']);
+
+            // Validate header image requirement if template has an IMAGE header component
+            $hasImageHeader = false;
+            $components = is_string($template->components) ? json_decode($template->components, true) : $template->components;
+            foreach ($components ?: [] as $c) {
+                if (strtoupper($c['type'] ?? '') === 'HEADER' && strtoupper($c['format'] ?? '') === 'IMAGE') {
+                    $hasImageHeader = true;
+                    break;
+                }
+            }
+
+            if ($hasImageHeader && ! $request->hasFile('header_image') && empty($validated['header_media_url'])) {
+                return back()->withErrors([
+                    'header_image' => __('This template requires a header image. Please upload an image or provide an image URL.'),
+                ])->withInput();
+            }
+        }
+
+        $headerMediaUrl = $validated['header_media_url'] ?? null;
+        if ($request->hasFile('header_image')) {
+            $path = $request->file('header_image')->store('campaigns/headers', 'public');
+            $headerMediaUrl = asset('storage/'.$path);
         }
 
         $recipientsList = [];
@@ -181,6 +205,7 @@ class CampaignController extends Controller
             'message_template_id' => $template?->id,
             'message_type' => $messageType,
             'direct_message_body' => $messageType === 'direct' ? $validated['direct_message_body'] : null,
+            'header_media_url' => $headerMediaUrl,
             'name' => $validated['name'],
             'status' => $scheduledAt ? 'scheduled' : 'draft',
             'total_recipients' => count($recipientsList),
@@ -237,6 +262,7 @@ class CampaignController extends Controller
                     ? __('Direct message')
                     : $campaign->messageTemplate?->name,
                 'direct_message_body' => $campaign->direct_message_body,
+                'header_media_url' => $campaign->header_media_url,
                 'phone_number' => $campaign->whatsappAccount->phone_number,
                 'total_recipients' => $campaign->total_recipients,
                 'sent_count' => $campaign->sent_count,

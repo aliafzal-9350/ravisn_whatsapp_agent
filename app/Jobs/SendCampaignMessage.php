@@ -72,6 +72,32 @@ class SendCampaignMessage implements ShouldQueue
             $variables = $this->recipient->variables ?? [];
             $components = ! empty($variables) ? $template->getTemplateComponents($variables) : [];
 
+            // If template has IMAGE header and campaign has header_media_url, prepend header component
+            if (! empty($this->campaign->header_media_url)) {
+                $hasImageHeader = false;
+                $templateComponents = is_string($template->components) ? json_decode($template->components, true) : $template->components;
+                foreach ($templateComponents ?: [] as $c) {
+                    if (strtoupper($c['type'] ?? '') === 'HEADER' && strtoupper($c['format'] ?? '') === 'IMAGE') {
+                        $hasImageHeader = true;
+                        break;
+                    }
+                }
+
+                if ($hasImageHeader) {
+                    array_unshift($components, [
+                        'type' => 'header',
+                        'parameters' => [
+                            [
+                                'type' => 'image',
+                                'image' => [
+                                    'link' => $this->campaign->header_media_url,
+                                ],
+                            ],
+                        ],
+                    ]);
+                }
+            }
+
             $response = $whatsAppApi->sendTemplateMessage(
                 $account->phone_number_id,
                 $this->recipient->phone_number,
