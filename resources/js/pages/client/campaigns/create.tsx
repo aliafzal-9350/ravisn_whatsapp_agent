@@ -190,6 +190,52 @@ export default function CampaignCreate({
         return templates.find((t) => String(t.id) === selectedTempId);
     }, [templates, selectedTempId]);
 
+    // Detect expected variable count from active template body
+    const expectedBodyVarCount = React.useMemo(() => {
+        if (!activeTemplate || messageType !== 'template') {
+            return 0;
+        }
+
+        const bodyComp = activeTemplate.components?.find(
+            (c) => c.type.toUpperCase() === 'BODY',
+        );
+        if (!bodyComp?.text) {
+            return 0;
+        }
+
+        const matches = bodyComp.text.match(/\{\{([^}]+)\}\}/g);
+        return matches ? matches.length : 0;
+    }, [activeTemplate, messageType]);
+
+    // Sanitize recipient variable list to strictly match template placeholder count
+    const sanitizeRecipients = React.useCallback(
+        (list: ParsedRecipient[], varCount: number) => {
+            return list.map((r) => {
+                if (varCount === 0 || !r.variables || r.variables.length === 0) {
+                    return {
+                        phone_number: r.phone_number,
+                        variables: null,
+                    };
+                }
+
+                return {
+                    phone_number: r.phone_number,
+                    variables: r.variables.slice(0, varCount),
+                };
+            });
+        },
+        [],
+    );
+
+    // Sync recipients when active template or expected body variable count changes
+    React.useEffect(() => {
+        if (targetType === 'file' && recipients.length > 0) {
+            const sanitized = sanitizeRecipients(recipients, expectedBodyVarCount);
+            setRecipients(sanitized);
+            setData('recipients', sanitized);
+        }
+    }, [expectedBodyVarCount]);
+
     // Detect if the active template has an IMAGE header
     const hasImageHeader = React.useMemo(() => {
         if (messageType !== 'template' || !activeTemplate) {
@@ -254,8 +300,10 @@ export default function CampaignCreate({
             }
 
             const resData = await response.json();
-            setRecipients(resData.recipients || []);
-            setData('recipients', resData.recipients || []);
+            const rawRecipients: ParsedRecipient[] = resData.recipients || [];
+            const sanitized = sanitizeRecipients(rawRecipients, expectedBodyVarCount);
+            setRecipients(sanitized);
+            setData('recipients', sanitized);
             toast.success(`Successfully parsed ${resData.count} recipients!`);
         } catch (e: any) {
             toast.error(e.message || 'Failed to parse recipient file.');

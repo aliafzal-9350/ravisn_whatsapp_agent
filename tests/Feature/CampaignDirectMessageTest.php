@@ -156,3 +156,85 @@ it('sends direct campaigns as text messages', function () {
         ->status->toBe('completed')
         ->completed_at->not->toBeNull();
 });
+
+it('slices extra template variables to match body placeholder count exactly', function () {
+    $tenant = Tenant::create([
+        'name' => 'Acme',
+        'email' => 'billing@example.com',
+        'status' => 'active',
+    ]);
+
+    $account = WhatsappAccount::create([
+        'tenant_id' => $tenant->id,
+        'waba_id' => '123456789',
+        'app_id' => 'app-id',
+        'app_secret' => 'app-secret',
+        'phone_number_id' => 'phone-number-id',
+        'phone_number' => '+15551234567',
+        'display_name' => 'Sales',
+        'status' => 'active',
+        'quality_rating' => 'GREEN',
+    ]);
+
+    $template = \App\Models\MessageTemplate::create([
+        'tenant_id' => $tenant->id,
+        'whatsapp_account_id' => $account->id,
+        'name' => 'greeting_single_var',
+        'language' => 'en_US',
+        'category' => 'MARKETING',
+        'status' => 'approved',
+        'components' => [
+            [
+                'type' => 'BODY',
+                'text' => 'Hello {{1}}, welcome!',
+            ],
+        ],
+    ]);
+
+    $campaign = Campaign::create([
+        'tenant_id' => $tenant->id,
+        'whatsapp_account_id' => $account->id,
+        'message_template_id' => $template->id,
+        'message_type' => 'template',
+        'name' => 'Single var campaign',
+        'status' => 'processing',
+        'total_recipients' => 1,
+    ]);
+
+    // Recipient has 3 variables, but template only has 1 placeholder {{1}}
+    $recipient = CampaignRecipient::create([
+        'campaign_id' => $campaign->id,
+        'phone_number' => '+15557654321',
+        'template_variables' => ['Ali Afzal', 'Extra Column 1', 'Extra Column 2'],
+    ]);
+
+    $whatsAppApi = $this->mock(WhatsAppCloudApi::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('sendTemplateMessage')
+            ->once()
+            ->with(
+                'phone-number-id',
+                '+15557654321',
+                'greeting_single_var',
+                'en_US',
+                [
+                    [
+                        'type' => 'body',
+                        'parameters' => [
+                            ['type' => 'text', 'text' => 'Ali Afzal'],
+                        ],
+                    ],
+                ]
+            )
+            ->andReturn(new Response(new PsrResponse(200, [], '{"messages":[{"id":"wamid.template123"}]}')));
+    });
+
+    app(SendCampaignMessage::class, [
+        'campaign' => $campaign,
+        'recipient' => $recipient->refresh(),
+    ])->handle($whatsAppApi);
+
+    expect($recipient->refresh())
+        ->status->toBe('sent')
+        ->whatsapp_message_id->toBe('wamid.template123');
+});
+

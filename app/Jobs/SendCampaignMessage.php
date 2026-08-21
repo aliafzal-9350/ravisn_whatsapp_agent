@@ -41,6 +41,7 @@ class SendCampaignMessage implements ShouldQueue
                 'error_message' => 'Contact previously opted out (STOP).',
             ]);
             $this->campaign->increment('failed_count');
+            $this->checkCampaignCompleted();
             return;
         }
 
@@ -51,6 +52,7 @@ class SendCampaignMessage implements ShouldQueue
                 'error_message' => 'WhatsApp account not configured.',
             ]);
             $this->campaign->increment('failed_count');
+            $this->checkCampaignCompleted();
             return;
         }
 
@@ -58,6 +60,63 @@ class SendCampaignMessage implements ShouldQueue
             $whatsAppApi->withToken($account->access_token);
         }
 
+        // 2. Direct message handling
+        if ($this->campaign->message_type === 'direct') {
+            try {
+                $response = $whatsAppApi->sendTextMessage(
+                    $account->phone_number_id,
+                    $this->recipient->phone_number,
+                    $this->campaign->direct_message_body ?? ''
+                );
+
+                if ($response->successful()) {
+                    $wamid = $response->json('messages.0.id');
+                    $this->recipient->update([
+                        'status' => 'sent',
+                        'whatsapp_message_id' => $wamid,
+                        'sent_at' => now(),
+                        'error_message' => null,
+                    ]);
+
+                    $this->campaign->increment('sent_count');
+                } else {
+                    $status = $response->status();
+                    $errBody = $response->json('error.message', 'Unknown Meta Error');
+
+                    if ($status === 429 || $response->json('error.code') === 130429) {
+                        $this->release(30);
+                        return;
+                    }
+
+                    $this->recipient->update([
+                        'status' => 'failed',
+                        'error_message' => "Meta Error ({$status}): {$errBody}",
+                    ]);
+                    $this->campaign->increment('failed_count');
+                }
+            } catch (\Throwable $e) {
+                Log::error('SendCampaignMessage direct message exception', [
+                    'recipient_id' => $this->recipient->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                if ($this->attempts() < $this->tries) {
+                    $this->release(10);
+                    return;
+                }
+
+                $this->recipient->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                ]);
+                $this->campaign->increment('failed_count');
+            }
+
+            $this->checkCampaignCompleted();
+            return;
+        }
+
+        // 3. Template message handling
         $template = $this->campaign->messageTemplate;
         if (! $template) {
             $this->recipient->update([
@@ -65,36 +124,120 @@ class SendCampaignMessage implements ShouldQueue
                 'error_message' => 'Template not found.',
             ]);
             $this->campaign->increment('failed_count');
+            $this->checkCampaignCompleted();
             return;
         }
 
         try {
-            $variables = $this->recipient->variables ?? [];
-            $components = ! empty($variables) ? $template->getTemplateComponents($variables) : [];
+            $templateComponents = is_string($template->components)
+                ? json_decode($template->components, true)
+                : ($template->components ?? []);
 
-            // If template has IMAGE header and campaign has header_media_url, prepend header component
-            if (! empty($this->campaign->header_media_url)) {
-                $hasImageHeader = false;
-                $templateComponents = is_string($template->components) ? json_decode($template->components, true) : $template->components;
-                foreach ($templateComponents ?: [] as $c) {
-                    if (strtoupper($c['type'] ?? '') === 'HEADER' && strtoupper($c['format'] ?? '') === 'IMAGE') {
-                        $hasImageHeader = true;
-                        break;
-                    }
+            $bodyText = '';
+            $hasImageHeader = false;
+
+            foreach ($templateComponents ?: [] as $comp) {
+                $type = strtoupper($comp['type'] ?? '');
+                if ($type === 'BODY') {
+                    $bodyText = $comp['text'] ?? '';
+                } elseif ($type === 'HEADER' && strtoupper($comp['format'] ?? '') === 'IMAGE') {
+                    $hasImageHeader = true;
                 }
+            }
 
-                if ($hasImageHeader) {
-                    array_unshift($components, [
-                        'type' => 'header',
-                        'parameters' => [
-                            [
-                                'type' => 'image',
-                                'image' => [
-                                    'link' => $this->campaign->header_media_url,
-                                ],
+            // Count matches of {{...}} in body text
+            preg_match_all('/\{\{([^}]+)\}\}/', $bodyText, $matches);
+            $expectedBodyParamCount = count($matches[0] ?? []);
+
+            $rawVars = $this->recipient->template_variables 
+                ?? $this->recipient->variables 
+                ?? [];
+            if (is_string($rawVars)) {
+                $rawVars = json_decode($rawVars, true) ?? [];
+            }
+            if (! is_array($rawVars)) {
+                $rawVars = [];
+            }
+
+            $slicedVars = array_slice($rawVars, 0, $expectedBodyParamCount);
+
+            $bodyParameters = [];
+            foreach ($slicedVars as $index => $var) {
+                $param = [
+                    'type' => 'text',
+                    'text' => (string) $var,
+                ];
+                $placeholderName = trim($matches[1][$index] ?? '');
+                if (! empty($placeholderName) && ! ctype_digit($placeholderName)) {
+                    $param['parameter_name'] = $placeholderName;
+                }
+                $bodyParameters[] = $param;
+            }
+
+            $components = [];
+
+            // 1. Header Image (if template has IMAGE header and URL exists)
+            if ($hasImageHeader && ! empty($this->campaign->header_media_url)) {
+                $components[] = [
+                    'type' => 'header',
+                    'parameters' => [
+                        [
+                            'type' => 'image',
+                            'image' => [
+                                'link' => $this->campaign->header_media_url,
                             ],
                         ],
-                    ]);
+                    ],
+                ];
+            }
+
+            // 2. Body Parameters (only add if template expects > 0 body params)
+            if ($expectedBodyParamCount > 0 && ! empty($bodyParameters)) {
+                $components[] = [
+                    'type' => 'body',
+                    'parameters' => $bodyParameters,
+                ];
+            }
+
+            // 3. Button Parameters (URL buttons with {{1}} placeholders)
+            foreach ($templateComponents ?: [] as $component) {
+                $type = strtoupper($component['type'] ?? '');
+                if ($type !== 'BUTTONS' || empty($component['buttons'])) {
+                    continue;
+                }
+
+                foreach ($component['buttons'] as $buttonIndex => $button) {
+                    $buttonType = strtoupper($button['type'] ?? '');
+                    if ($buttonType !== 'URL') {
+                        continue;
+                    }
+
+                    $url = $button['url'] ?? '';
+                    preg_match_all('/\{\{\s*([^}]+)\s*\}\}/', $url, $urlMatches);
+
+                    if (empty($urlMatches[1])) {
+                        continue;
+                    }
+
+                    $buttonParams = [];
+                    foreach ($urlMatches[1] as $urlParamIndex => $paramName) {
+                        $buttonVarIndex = $expectedBodyParamCount + $urlParamIndex;
+                        if (isset($rawVars[$buttonVarIndex])) {
+                            $buttonParams[] = [
+                                'type' => 'text',
+                                'text' => (string) $rawVars[$buttonVarIndex],
+                            ];
+                        }
+                    }
+
+                    if (! empty($buttonParams)) {
+                        $components[] = [
+                            'type' => 'button',
+                            'sub_type' => 'url',
+                            'index' => (string) $buttonIndex,
+                            'parameters' => $buttonParams,
+                        ];
+                    }
                 }
             }
 
@@ -139,13 +282,26 @@ class SendCampaignMessage implements ShouldQueue
 
             if ($this->attempts() < $this->tries) {
                 $this->release(10);
-            } else {
-                $this->recipient->update([
-                    'status' => 'failed',
-                    'error_message' => $e->getMessage(),
-                ]);
-                $this->campaign->increment('failed_count');
+                return;
             }
+
+            $this->recipient->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+            ]);
+            $this->campaign->increment('failed_count');
+        }
+
+        $this->checkCampaignCompleted();
+    }
+
+    protected function checkCampaignCompleted(): void
+    {
+        if ($this->campaign->hasProcessedAllRecipients()) {
+            $this->campaign->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
         }
     }
 }
