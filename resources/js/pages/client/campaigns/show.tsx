@@ -8,12 +8,21 @@ import {
     RefreshCw,
     Send,
     MessageSquare,
+    Trash2,
 } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import type { Column } from '@/components/ui/data-table';
 import { DataTable } from '@/components/ui/data-table';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -68,6 +77,8 @@ export default function CampaignShow({
 }: CampaignShowProps) {
     const [actioning, setActioning] = React.useState(false);
     const [refreshing, setRefreshing] = React.useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+    const [deleting, setDeleting] = React.useState(false);
 
     const handleRefresh = () => {
         setRefreshing(true);
@@ -108,6 +119,14 @@ export default function CampaignShow({
                 onFinish: () => setActioning(false),
             },
         );
+    };
+
+    const confirmDelete = () => {
+        setDeleting(true);
+        router.delete(`/dashboard/campaigns/${String(campaign.id)}`, {
+            onSuccess: () => setShowDeleteDialog(false),
+            onFinish: () => setDeleting(false),
+        });
     };
 
     const columns: Column<RecipientRow>[] = [
@@ -244,6 +263,18 @@ export default function CampaignShow({
                                 <span>Pause Campaign</span>
                             </Button>
                         )}
+
+                        {/* Delete action */}
+                        <Button
+                            onClick={() => setShowDeleteDialog(true)}
+                            disabled={actioning || deleting}
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/50 dark:hover:bg-rose-950/20"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            <span>Delete</span>
+                        </Button>
                     </div>
                 </div>
 
@@ -347,9 +378,45 @@ export default function CampaignShow({
                         emptyMessage="No recipients found in this campaign list."
                     />
                 </div>
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog
+                    open={showDeleteDialog}
+                    onOpenChange={setShowDeleteDialog}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Campaign</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete campaign &quot;
+                                {campaign.name}&quot;? This action cannot be
+                                undone and will permanently remove all recipient
+                                delivery logs.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2">
+                            <Button
+                                variant="outline"
+                                disabled={deleting}
+                                onClick={() => setShowDeleteDialog(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                disabled={deleting}
+                                className="bg-rose-600 text-white hover:bg-rose-700"
+                                onClick={confirmDelete}
+                            >
+                                {deleting ? 'Deleting...' : 'Delete Campaign'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </>
     );
 }
 
 CampaignShow.layout = (page: any) => page;
+

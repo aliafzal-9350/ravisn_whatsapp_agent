@@ -1,9 +1,17 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Trash2 } from 'lucide-react';
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import type { Column } from '@/components/ui/data-table';
 import { DataTable } from '@/components/ui/data-table';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -37,6 +45,20 @@ interface CampaignsIndexProps {
 }
 
 export default function CampaignsIndex({ campaigns }: CampaignsIndexProps) {
+    const [campaignToDelete, setCampaignToDelete] =
+        React.useState<CampaignLog | null>(null);
+
+    const confirmDelete = () => {
+        if (!campaignToDelete) {
+            return;
+        }
+
+        router.delete(`/dashboard/campaigns/${String(campaignToDelete.id)}`, {
+            preserveScroll: true,
+            onSuccess: () => setCampaignToDelete(null),
+        });
+    };
+
     const columns: Column<CampaignLog>[] = [
         {
             header: 'Campaign Name',
@@ -124,15 +146,26 @@ export default function CampaignsIndex({ campaigns }: CampaignsIndexProps) {
             header: 'Actions',
             className: 'text-right',
             cell: (row) => (
-                <Button size="sm" variant="ghost" asChild>
-                    <Link
-                        href={`/dashboard/campaigns/${row.id}`}
-                        className="inline-flex items-center gap-1"
+                <div className="flex justify-end gap-1.5">
+                    <Button size="sm" variant="ghost" asChild>
+                        <Link
+                            href={`/dashboard/campaigns/${row.id}`}
+                            className="inline-flex items-center gap-1"
+                        >
+                            <Eye className="h-4 w-4" />
+                            <span>Trace</span>
+                        </Link>
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1 text-rose-600 hover:bg-rose-500/5 hover:text-rose-700"
+                        onClick={() => setCampaignToDelete(row)}
                     >
-                        <Eye className="h-4 w-4" />
-                        <span>Trace</span>
-                    </Link>
-                </Button>
+                        <Trash2 className="h-4 w-4" />
+                        <span>Delete</span>
+                    </Button>
+                </div>
             ),
         },
     ];
@@ -184,9 +217,47 @@ export default function CampaignsIndex({ campaigns }: CampaignsIndexProps) {
                     }}
                     emptyMessage="No campaigns launched yet. Click 'Create Campaign' to start broadcasting."
                 />
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog
+                    open={!!campaignToDelete}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setCampaignToDelete(null);
+                        }
+                    }}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Campaign</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete campaign &quot;
+                                {campaignToDelete?.name}&quot;? This action
+                                cannot be undone and will permanently remove all
+                                recipient delivery logs.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setCampaignToDelete(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                className="bg-rose-600 text-white hover:bg-rose-700"
+                                onClick={confirmDelete}
+                            >
+                                Delete Campaign
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </>
     );
 }
 
 CampaignsIndex.layout = (page: any) => page;
+

@@ -332,6 +332,31 @@ class CampaignController extends Controller
     }
 
     /**
+     * Delete a campaign and its recipient delivery logs.
+     */
+    public function destroy(Request $request, Campaign $campaign): RedirectResponse
+    {
+        $tenant = $request->user()->tenant;
+
+        if (! $tenant || (string) $campaign->tenant_id !== (string) $tenant->id) {
+            abort(403);
+        }
+
+        // Delete associated recipients & logs
+        $campaign->recipients()->delete();
+
+        // Delete campaign
+        $campaign->delete();
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Campaign deleted successfully.'),
+        ]);
+
+        return to_route('client.campaigns.index');
+    }
+
+    /**
      * Upload recipients from an Excel/CSV file.
      */
     public function uploadRecipients(Request $request): JsonResponse

@@ -100,6 +100,7 @@ Route::middleware(['auth', 'verified', 'client'])
             Route::get('campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
             Route::post('campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
             Route::get('campaigns/{campaign}', [CampaignController::class, 'show'])->name('campaigns.show');
+            Route::delete('campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
             Route::post('campaigns/{campaign}/start', [CampaignController::class, 'start'])->name('campaigns.start');
             Route::post('campaigns/{campaign}/pause', [CampaignController::class, 'pause'])->name('campaigns.pause');
             Route::post('campaigns/upload-recipients', [CampaignController::class, 'uploadRecipients'])->name('campaigns.upload-recipients');
