@@ -21,12 +21,7 @@ class OutgoingWebhook extends Model
      */
     protected $keyType = 'string';
 
-    /**
-     * Indicates if the model's ID is auto-incrementing.
-     *
-     * @var bool
-     */
-    public $incrementing = false;
+
 
     /**
      * Get the attributes that should be cast.

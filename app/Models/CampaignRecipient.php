@@ -9,8 +9,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'campaign_id', 'phone_number', 'status', 'whatsapp_message_id',
-    'error_message', 'template_variables', 'sent_at', 'delivered_at', 'read_at',
+    'campaign_id',
+    'phone_number',
+    'template_variables',
+    'status',
+    'whatsapp_message_id',
+    'message_id',
+    'error_message',
+    'sent_at',
+    'delivered_at',
+    'read_at',
+    'failed_at',
 ])]
 class CampaignRecipient extends Model
 {
@@ -23,13 +32,6 @@ class CampaignRecipient extends Model
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * Indicates if the model's ID is auto-incrementing.
-     *
-     * @var bool
-     */
-    public $incrementing = false;
 
     /**
      * Get the attributes that should be cast.

@@ -216,8 +216,10 @@ class CampaignController extends Controller
         // Create recipients
         foreach ($recipientsList as $recipientData) {
             $campaign->recipients()->create([
+                'campaign_id' => (string) $campaign->id,
                 'phone_number' => $recipientData['phone_number'],
                 'template_variables' => $recipientData['variables'] ?? null,
+                'status' => 'pending',
             ]);
         }
 
